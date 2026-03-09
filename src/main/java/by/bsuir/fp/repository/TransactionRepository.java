@@ -62,4 +62,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long>,
             @Param("user") User user,
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
+
+    @Query("SELECT t.category, COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+            "WHERE t.user = :user AND t.type = :type " +
+            "AND t.transactionDate BETWEEN :startDate AND :endDate " +
+            "AND t.category IS NOT NULL " +
+            "GROUP BY t.category")
+    List<Object[]> findByUserAndTypeAndTransactionDateBetweenGroupByCategory(
+            @Param("user") User user,
+            @Param("type") TransactionType type,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }
