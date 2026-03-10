@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="1" author="ytkachik">
+        <comment>Create users table</comment>
+        <createTable tableName="users">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="password_hash" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="google_id" type="VARCHAR(100)"/>
+            <column name="default_currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="2" author="ytkachik">
+        <comment>Create accounts table</comment>
+        <createTable tableName="accounts">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_accounts_user" references="users(id)"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="initial_balance" type="DECIMAL(10,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_balance" type="DECIMAL(10,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3" author="ytkachik">
+        <comment>Create categories table</comment>
+        <createTable tableName="categories">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_categories_user" references="users(id)"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="color" type="VARCHAR(7)"/>
+            <column name="icon" type="VARCHAR(50)"/>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="is_default" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="4" author="ytkachik">
+        <comment>Create transactions table</comment>
+        <createTable tableName="transactions">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_transactions_user" references="users(id)"/>
+            </column>
+            <column name="account_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_transactions_account" references="accounts(id)"/>
+            </column>
+            <column name="category_id" type="BIGINT">
+                <constraints foreignKeyName="fk_transactions_category" references="categories(id)"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="transaction_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="is_categorized" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="is_reconciled" type="BOOLEAN" defaultValueBoolean="false"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="5" author="ytkachik">
+        <comment>Create categorization rules table</comment>
+        <createTable tableName="categorization_rules">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rules_user" references="users(id)"/>
+            </column>
+            <column name="category_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_rules_category" references="categories(id)"/>
+            </column>
+            <column name="field" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operator" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="priority" type="INT" defaultValueNumeric="0"/>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="6" author="ytkachik">
+        <comment>Create budgets table</comment>
+        <createTable tableName="budgets">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_budgets_user" references="users(id)"/>
+            </column>
+            <column name="name" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period_month" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period_year" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="planned_income" type="DECIMAL(10,2)"/>
+            <column name="status" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="start_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="end_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(500)"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="7" author="ytkachik">
+        <comment>Create budget limits table</comment>
+        <createTable tableName="budget_limits">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="budget_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_limits_budget" references="budgets(id)"/>
+            </column>
+            <column name="category_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_limits_category" references="categories(id)"/>
+            </column>
+            <column name="limit_amount" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="spent_amount" type="DECIMAL(10,2)" defaultValueNumeric="0"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="8" author="ytkachik">
+        <comment>Create currency rates table</comment>
+        <createTable tableName="currency_rates">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rate_to_byn" type="DECIMAL(10,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="rate_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

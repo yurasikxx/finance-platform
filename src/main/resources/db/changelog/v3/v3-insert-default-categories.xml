@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="12" author="ytkachik">
+        <comment>Добавление категорий по умолчанию для всех пользователей (will be copied for new users)</comment>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Зарплата"/>
+            <column name="type" value="INCOME"/>
+            <column name="color" value="#28a745"/>
+            <column name="icon" value="briefcase"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Фриланс"/>
+            <column name="type" value="INCOME"/>
+            <column name="color" value="#17a2b8"/>
+            <column name="icon" value="laptop"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Подарки"/>
+            <column name="type" value="INCOME"/>
+            <column name="color" value="#ffc107"/>
+            <column name="icon" value="gift"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <!-- Expense categories -->
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Продукты"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#dc3545"/>
+            <column name="icon" value="cart"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Транспорт"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#fd7e14"/>
+            <column name="icon" value="bus"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Рестораны"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#e83e8c"/>
+            <column name="icon" value="cup-straw"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Развлечения"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#6f42c1"/>
+            <column name="icon" value="controller"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Здоровье"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#20c997"/>
+            <column name="icon" value="heart-pulse"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Одежда"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#7952b3"/>
+            <column name="icon" value="bag"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+
+        <insert tableName="categories">
+            <column name="user_id" value="1"/>
+            <column name="name" value="Коммунальные"/>
+            <column name="type" value="EXPENSE"/>
+            <column name="color" value="#6c757d"/>
+            <column name="icon" value="house"/>
+            <column name="is_default" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

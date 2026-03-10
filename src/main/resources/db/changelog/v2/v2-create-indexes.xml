@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="11" author="ytkachik">
+        <comment>Создание индексов для лучшей производительности</comment>
+
+        <createIndex tableName="transactions" indexName="idx_transactions_user_id">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex tableName="transactions" indexName="idx_transactions_date">
+            <column name="transaction_date"/>
+        </createIndex>
+
+        <createIndex tableName="transactions" indexName="idx_transactions_category">
+            <column name="category_id"/>
+        </createIndex>
+
+        <createIndex tableName="transactions" indexName="idx_transactions_account">
+            <column name="account_id"/>
+        </createIndex>
+
+        <createIndex tableName="budgets" indexName="idx_budgets_user_period">
+            <column name="user_id"/>
+            <column name="period_month"/>
+            <column name="period_year"/>
+        </createIndex>
+
+        <createIndex tableName="categorization_rules" indexName="idx_rules_user_active">
+            <column name="user_id"/>
+            <column name="is_active"/>
+        </createIndex>
+
+        <createIndex tableName="currency_rates" indexName="idx_currency_rates_date">
+            <column name="currency"/>
+            <column name="rate_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>
