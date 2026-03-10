@@ -14,4 +14,5 @@ public class UserResponseDto {
     private String email;
     private CurrencyCode defaultCurrency;
     private LocalDateTime createdAt;
+    private String googleId;
 }

@@ -6,10 +6,12 @@ import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.BudgetService;
 import by.bsuir.fp.service.CategoryService;
 import by.bsuir.fp.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
@@ -26,7 +28,7 @@ public class BudgetWebController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public String list(@RequestParam(required = false) Integer year, Model model) {
+    public String list(@RequestParam(required = false) Integer year, Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         if (year == null) {
@@ -38,11 +40,13 @@ public class BudgetWebController {
         model.addAttribute("budgets", budgets);
         model.addAttribute("selectedYear", year);
         model.addAttribute("years", List.of(year - 1, year, year + 1));
+        model.addAttribute("currentUri", request.getRequestURI());
+
         return "budgets/list";
     }
 
     @GetMapping("/active")
-    public String active(Model model) {
+    public String active(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         YearMonth current = YearMonth.now();
 
@@ -53,11 +57,13 @@ public class BudgetWebController {
         );
 
         model.addAttribute("budget", activeBudget);
+        model.addAttribute("currentUri", request.getRequestURI());
+
         return "budgets/active";
     }
 
     @GetMapping("/create")
-    public String createForm(Model model) {
+    public String createForm(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         YearMonth current = YearMonth.now();
 
@@ -74,19 +80,25 @@ public class BudgetWebController {
         model.addAttribute("categoryMap", categoryMap);
         model.addAttribute("months", List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
         model.addAttribute("currentYear", current.getYear());
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "budgets/form";
     }
 
     @PostMapping
-    public String create(@ModelAttribute BudgetCreateDto budgetCreate) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        budgetService.createBudget(userId, budgetCreate);
+    public String create(@ModelAttribute BudgetCreateDto budgetCreate, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            budgetService.createBudget(userId, budgetCreate);
+            redirectAttributes.addFlashAttribute("success", "Бюджет создан");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/budgets/active";
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         BudgetDto budget = budgetService.getBudgetById(userId, id).orElse(null);
@@ -110,28 +122,46 @@ public class BudgetWebController {
         model.addAttribute("budgetId", id);
         model.addAttribute("categories", categories);
         model.addAttribute("months", List.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12));
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "budgets/edit";
     }
 
     @PostMapping("/{id}/edit")
-    public String update(@PathVariable Long id, @ModelAttribute BudgetCreateDto budgetCreate) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        budgetService.updateBudget(userId, id, budgetCreate);
+    public String update(@PathVariable Long id,
+                         @ModelAttribute BudgetCreateDto budgetCreate,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            budgetService.updateBudget(userId, id, budgetCreate);
+            redirectAttributes.addFlashAttribute("success", "Бюджет изменён");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/budgets/active";
     }
 
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        budgetService.deleteBudget(userId, id);
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            budgetService.deleteBudget(userId, id);
+            redirectAttributes.addFlashAttribute("success", "Бюджет удалён");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/budgets";
     }
 
     @PostMapping("/{id}/complete")
-    public String complete(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        budgetService.completeBudget(userId, id);
+    public String complete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            budgetService.completeBudget(userId, id);
+            redirectAttributes.addFlashAttribute("success", "Бюджет завершен");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/budgets";
     }
 }

@@ -1,5 +1,6 @@
 package by.bsuir.fp.controller.web;
 
+import by.bsuir.fp.controller.dto.CategoryBreakdownDto;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.model.enums.TransactionType;
@@ -8,6 +9,7 @@ import by.bsuir.fp.service.AnalyticsService;
 import by.bsuir.fp.service.BudgetService;
 import by.bsuir.fp.service.TransactionService;
 import by.bsuir.fp.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -30,7 +33,7 @@ public class DashboardWebController {
     private final BudgetService budgetService;
 
     @GetMapping("/dashboard")
-    public String dashboard(Model model) {
+    public String dashboard(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         LocalDate now = LocalDate.now();
@@ -59,6 +62,11 @@ public class DashboardWebController {
         model.addAttribute("recentTransactions", recentTransactions);
         model.addAttribute("activeBudget", activeBudget);
         model.addAttribute("expenseBreakdown", expenseBreakdown);
+        model.addAttribute("expenseLabels", expenseBreakdown.stream().map(CategoryBreakdownDto::getCategoryName).toList());
+        model.addAttribute("expenseData", expenseBreakdown.stream().map(CategoryBreakdownDto::getAmount).toList());
+        model.addAttribute("dailyExpenses", stats);
+        model.addAttribute("currentUri", request.getRequestURI());
+        model.addAttribute("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
 
         return "dashboard";
     }

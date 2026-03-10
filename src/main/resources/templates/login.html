@@ -2,6 +2,23 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head th:replace="~{layout/header :: header('Вход в систему')}"></head>
 <body>
+<div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    Неверный email или пароль
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-check-circle-fill"></i>
+    Вы успешно вышли из системы
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:if="${param.registered}" class="alert alert-success alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-check-circle-fill"></i>
+    Регистрация успешна! Войдите в систему
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-4">

@@ -4,50 +4,49 @@
     <div class="sidebar-sticky pt-3">
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link" href="/dashboard"
-                   th:classappend="${#request.requestURI == '/dashboard'} ? 'active' : ''">
+                <a class="nav-link" href="/dashboard" th:classappend="${currentUri == '/dashboard'} ? 'active' : ''">
                     <i class="bi bi-speedometer2"></i> Дашборд
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/accounts"
-                   th:classappend="${#request.requestURI.startsWith('/accounts')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/accounts')} ? 'active' : ''">
                     <i class="bi bi-wallet2"></i> Счета
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/transactions"
-                   th:classappend="${#request.requestURI.startsWith('/transactions')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/transactions')} ? 'active' : ''">
                     <i class="bi bi-list"></i> Транзакции
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/categories"
-                   th:classappend="${#request.requestURI.startsWith('/categories')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/categories')} ? 'active' : ''">
                     <i class="bi bi-tags"></i> Категории
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/budgets/active"
-                   th:classappend="${#request.requestURI.startsWith('/budgets')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/budgets')} ? 'active' : ''">
                     <i class="bi bi-pie-chart"></i> Бюджет
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/rules"
-                   th:classappend="${#request.requestURI.startsWith('/rules')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/rules')} ? 'active' : ''">
                     <i class="bi bi-gear"></i> Правила
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/analytics"
-                   th:classappend="${#request.requestURI.startsWith('/analytics')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/analytics')} ? 'active' : ''">
                     <i class="bi bi-graph-up"></i> Аналитика
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/profile"
-                   th:classappend="${#request.requestURI.startsWith('/profile')} ? 'active' : ''">
+                   th:classappend="${currentUri != null and currentUri.startsWith('/profile')} ? 'active' : ''">
                     <i class="bi bi-person"></i> Профиль
                 </a>
             </li>

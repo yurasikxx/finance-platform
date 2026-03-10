@@ -7,7 +7,7 @@
         <div class="col-md-4">
             <h3 class="text-center mb-4">Регистрация</h3>
 
-            <form method="post" action="/api/v1/auth/register" th:object="${user}">
+            <form method="post" action="/api/v1/auth/register" id="registerForm">
                 <div class="mb-3">
                     <label class="form-label">Имя</label>
                     <input type="text" name="username" class="form-control" required>
@@ -18,11 +18,11 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Пароль</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <input type="password" name="password" class="form-control" required minlength="6">
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Валюта по умолчанию</label>
-                    <select name="defaultCurrency" class="form-select">
+                    <select name="defaultCurrency" class="form-select" required>
                         <option th:each="currency : ${currencies}"
                                 th:value="${currency}"
                                 th:text="${currency}">BYN
@@ -38,5 +38,41 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('registerForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const formData = {
+            username: this.username.value,
+            email: this.email.value,
+            password: this.password.value,
+            defaultCurrency: this.defaultCurrency.value
+        };
+
+        try {
+            const response = await fetch('/api/v1/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken);
+                window.location.href = '/dashboard';
+            } else {
+                const error = await response.text();
+                alert('Ошибка регистрации: ' + error);
+            }
+        } catch (error) {
+            alert('Ошибка сети: ' + error);
+        }
+    });
+</script>
 </body>
 </html>

@@ -109,6 +109,7 @@ public class UserService {
                 .email(user.getEmail())
                 .defaultCurrency(user.getDefaultCurrency())
                 .createdAt(user.getCreatedAt())
+                .googleId(user.getGoogleId())
                 .build();
     }
 }

@@ -1,7 +1,32 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml" lang="ru">
+
+<div th:if="${success}" class="alert alert-success alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-check-circle-fill"></i>
+    <span th:text="${success}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:if="${error}" class="alert alert-danger alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <span th:text="${error}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:if="${warning}" class="alert alert-warning alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-exclamation-circle-fill"></i>
+    <span th:text="${warning}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div th:if="${info}" class="alert alert-info alert-dismissible fade show alert-flash" role="alert">
+    <i class="bi bi-info-circle-fill"></i>
+    <span th:text="${info}"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
 <div th:fragment="navbar" class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0 shadow">
-    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">Finance Platform</a>
+    <a class="navbar-brand col-md-3 col-lg-2 me-0 px-3" href="/">Финансовая платформа</a>
     <button class="navbar-toggler position-absolute d-md-none collapsed" type="button" data-bs-toggle="collapse"
             data-bs-target="#sidebarMenu">
         <span class="navbar-toggler-icon"></span>
@@ -16,3 +41,12 @@
         </div>
     </div>
 </div>
+
+<script>
+    setTimeout(function() {
+        document.querySelectorAll('.alert-flash').forEach(function(alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+</script>

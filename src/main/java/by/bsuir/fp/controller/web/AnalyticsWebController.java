@@ -7,6 +7,7 @@ import by.bsuir.fp.controller.dto.DailyTotalDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.AnalyticsService;
 import by.bsuir.fp.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -29,22 +30,23 @@ public class AnalyticsWebController {
     public String dashboard(
             @RequestParam(required = false) String fromDate,
             @RequestParam(required = false) String toDate,
-            Model model) {
+            Model model, HttpServletRequest request) {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
         LocalDate start = fromDate != null ? LocalDate.parse(fromDate) : YearMonth.now().atDay(1);
         LocalDate end = toDate != null ? LocalDate.parse(toDate) : LocalDate.now();
 
-        AnalyticsRequestDto request = new AnalyticsRequestDto();
-        request.setFromDate(start);
-        request.setToDate(end);
+        AnalyticsRequestDto requestDto = new AnalyticsRequestDto();
+        requestDto.setFromDate(start);
+        requestDto.setToDate(end);
 
-        AnalyticsDashboardDto dashboard = analyticsService.getDashboard(userId, request);
+        AnalyticsDashboardDto dashboard = analyticsService.getDashboard(userId, requestDto);
 
         model.addAttribute("dashboard", dashboard);
         model.addAttribute("fromDate", start.format(DateTimeFormatter.ISO_DATE));
         model.addAttribute("toDate", end.format(DateTimeFormatter.ISO_DATE));
+        model.addAttribute("currentUri", request.getRequestURI());
 
         model.addAttribute("expenseLabels",
                 dashboard.getExpenseBreakdown().stream().map(CategoryBreakdownDto::getCategoryName).toList());
@@ -62,7 +64,7 @@ public class AnalyticsWebController {
     }
 
     @GetMapping("/reports")
-    public String reports(Model model) {
+    public String reports(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         LocalDate now = LocalDate.now();
@@ -85,6 +87,7 @@ public class AnalyticsWebController {
         model.addAttribute("monthStats", monthStats);
         model.addAttribute("yearStats", yearStats);
         model.addAttribute("expenseBreakdown", expenseBreakdown);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "analytics/reports";
     }

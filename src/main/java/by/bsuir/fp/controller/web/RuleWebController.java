@@ -6,10 +6,12 @@ import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.CategorizationRuleService;
 import by.bsuir.fp.service.CategoryService;
 import by.bsuir.fp.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -22,7 +24,7 @@ public class RuleWebController {
     private final CategoryService categoryService;
 
     @GetMapping
-    public String list(Model model) {
+    public String list(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         List<RuleDto> rules = ruleService.getUserRules(userId);
@@ -30,11 +32,13 @@ public class RuleWebController {
 
         model.addAttribute("rules", rules);
         model.addAttribute("activeRules", activeRules);
+        model.addAttribute("currentUri", request.getRequestURI());
+
         return "rules/list";
     }
 
     @GetMapping("/add")
-    public String addForm(Model model) {
+    public String addForm(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         model.addAttribute("rule", new RuleDto());
@@ -42,19 +46,25 @@ public class RuleWebController {
         model.addAttribute("operators", RuleOperator.values());
         model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
         model.addAttribute("isEdit", false);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "rules/form";
     }
 
     @PostMapping
-    public String create(@ModelAttribute RuleDto ruleDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        ruleService.createRule(userId, ruleDto);
+    public String create(@ModelAttribute RuleDto ruleDto, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            ruleService.createRule(userId, ruleDto);
+            redirectAttributes.addFlashAttribute("success", "Правило создано");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/rules";
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         RuleDto rule = ruleService.getRuleById(userId, id);
@@ -64,28 +74,45 @@ public class RuleWebController {
         model.addAttribute("operators", RuleOperator.values());
         model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
         model.addAttribute("isEdit", true);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "rules/form";
     }
 
     @PostMapping("/{id}/edit")
-    public String update(@PathVariable Long id, @ModelAttribute RuleDto ruleDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        ruleService.updateRule(userId, id, ruleDto);
+    public String update(@PathVariable Long id, @ModelAttribute RuleDto ruleDto, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            ruleService.updateRule(userId, id, ruleDto);
+            redirectAttributes.addFlashAttribute("success", "Правило изменено");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/rules";
     }
 
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        ruleService.deleteRule(userId, id);
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            ruleService.deleteRule(userId, id);
+            redirectAttributes.addFlashAttribute("success", "Правило удалено");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/rules";
     }
 
     @PostMapping("/{id}/toggle")
-    public String toggle(@PathVariable Long id, @RequestParam Boolean active) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        ruleService.toggleRuleActive(userId, id, active);
+    public String toggle(@PathVariable Long id, @RequestParam Boolean active, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            ruleService.toggleRuleActive(userId, id, active);
+            String status = active ? "активировано" : "деактивировано";
+            redirectAttributes.addFlashAttribute("success", "Правило " + status);
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/rules";
     }
 }

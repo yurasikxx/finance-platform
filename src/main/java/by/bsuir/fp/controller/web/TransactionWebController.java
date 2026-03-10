@@ -7,11 +7,13 @@ import by.bsuir.fp.service.AccountService;
 import by.bsuir.fp.service.CategoryService;
 import by.bsuir.fp.service.TransactionService;
 import by.bsuir.fp.util.SecurityUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 
@@ -30,9 +32,7 @@ public class TransactionWebController {
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) String fromDate,
-            @RequestParam(required = false) String toDate,
-            Model model) {
+            Model model, HttpServletRequest request) {
 
         Long userId = SecurityUtils.getCurrentUserId();
 
@@ -55,12 +55,13 @@ public class TransactionWebController {
         model.addAttribute("selectedAccountId", accountId);
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("selectedType", type);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "transactions/list";
     }
 
     @GetMapping("/add")
-    public String addForm(Model model) {
+    public String addForm(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         model.addAttribute("transaction", new TransactionDto());
@@ -68,19 +69,25 @@ public class TransactionWebController {
         model.addAttribute("expenseCategories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
         model.addAttribute("incomeCategories", categoryService.getUserCategories(userId, TransactionType.INCOME));
         model.addAttribute("isEdit", false);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "transactions/form";
     }
 
     @PostMapping
-    public String create(@ModelAttribute TransactionDto transactionDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        transactionService.createTransaction(userId, transactionDto);
+    public String create(@ModelAttribute TransactionDto transactionDto, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            transactionService.createTransaction(userId, transactionDto);
+            redirectAttributes.addFlashAttribute("success", "Транзакция успешно добавлена");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка добавления транзакции: " + e.getMessage());
+        }
         return "redirect:/transactions";
     }
 
     @GetMapping("/{id}/edit")
-    public String editForm(@PathVariable Long id, Model model) {
+    public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         TransactionDto transaction = transactionService.getTransactionById(userId, id);
@@ -90,47 +97,69 @@ public class TransactionWebController {
         model.addAttribute("expenseCategories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
         model.addAttribute("incomeCategories", categoryService.getUserCategories(userId, TransactionType.INCOME));
         model.addAttribute("isEdit", true);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "transactions/form";
     }
 
     @PostMapping("/{id}/edit")
-    public String update(@PathVariable Long id, @ModelAttribute TransactionDto transactionDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        transactionService.updateTransaction(userId, id, transactionDto);
+    public String update(@PathVariable Long id,
+                         @ModelAttribute TransactionDto transactionDto,
+                         RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            transactionService.updateTransaction(userId, id, transactionDto);
+            redirectAttributes.addFlashAttribute("success", "Транзакция обновлена");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка обновления: " + e.getMessage());
+        }
+
         return "redirect:/transactions";
     }
 
     @PostMapping("/{id}/delete")
-    public String delete(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        transactionService.deleteTransaction(userId, id);
+    public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            transactionService.deleteTransaction(userId, id);
+            redirectAttributes.addFlashAttribute("success", "Транзакция удалена");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка удаления: " + e.getMessage());
+        }
         return "redirect:/transactions";
     }
 
     @GetMapping("/import")
-    public String importForm(Model model) {
+    public String importForm(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
+        model.addAttribute("currentUri", request.getRequestURI());
+
         return "transactions/import";
     }
 
     @GetMapping("/uncategorized")
-    public String uncategorized(Model model) {
+    public String uncategorized(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
 
         List<TransactionDto> uncategorized = transactionService.getUncategorizedTransactions(userId);
         model.addAttribute("transactions", uncategorized);
         model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "transactions/uncategorized";
     }
 
     @PostMapping("/{id}/categorize")
-    public String categorize(@PathVariable Long id, @RequestParam Long categoryId) {
-        Long userId = SecurityUtils.getCurrentUserId();
-        transactionService.categorizeTransaction(userId, id, categoryId);
+    public String categorize(@PathVariable Long id, @RequestParam Long categoryId, RedirectAttributes redirectAttributes) {
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            transactionService.categorizeTransaction(userId, id, categoryId);
+            redirectAttributes.addFlashAttribute("success", "Категория назначена");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
         return "redirect:/transactions/uncategorized";
     }
 }
