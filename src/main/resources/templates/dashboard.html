@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head th:replace="~{layout/header :: header('Дашборд')}"></head>
+<body>
+<div th:replace="~{layout/navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div th:replace="~{layout/sidebar}"></div>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Дашборд</h1>
+                <div class="btn-toolbar mb-2 mb-md-0">
+                    <span th:text="${#dates.format(new java.util.Date(), 'dd.MM.yyyy')}" class="me-3">01.01.2024</span>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Общий баланс</h5>
+                            <h3 th:text="${#numbers.formatDecimal(totalBalance, 1, 2, 'COMMA')} + ' BYN'">0.00 BYN</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Доходы за месяц</h5>
+                            <h3 th:text="${#numbers.formatDecimal(monthlyIncome, 1, 2, 'COMMA')} + ' BYN'">0.00 BYN</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Расходы за месяц</h5>
+                            <h3 th:text="${#numbers.formatDecimal(monthlyExpense, 1, 2, 'COMMA')} + ' BYN'">0.00
+                                BYN</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card" th:classappend="${netBalance >= 0} ? 'bg-info text-white' : 'bg-warning'">
+                        <div class="card-body">
+                            <h5 class="card-title">Чистый доход</h5>
+                            <h3 th:text="${#numbers.formatDecimal(netBalance, 1, 2, 'COMMA')} + ' BYN'">0.00 BYN</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-pie-chart"></i> Структура расходов
+                        </div>
+                        <div class="card-body">
+                            <canvas id="expenseChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-graph-up"></i> Динамика за месяц
+                        </div>
+                        <div class="card-body">
+                            <canvas id="trendChart" style="height: 300px;"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${activeBudget != null}" class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-warning">
+                            <i class="bi bi-pie-chart"></i> Активный бюджет: <span th:text="${activeBudget.name}">Март 2024</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="progress mb-2" style="height: 25px;">
+                                        <div class="progress-bar"
+                                             th:classappend="${activeBudget.progressPercentage >= 100} ? 'bg-danger' : (${activeBudget.progressPercentage >= 80} ? 'bg-warning' : 'bg-success')"
+                                             th:style="'width: ' + ${activeBudget.progressPercentage} + '%'"
+                                             th:text="${activeBudget.progressPercentage} + '%'">60%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <span th:text="${#numbers.formatDecimal(activeBudget.totalSpent, 1, 2, 'COMMA')} + ' / ' + ${#numbers.formatDecimal(activeBudget.remainingBudget, 1, 2, 'COMMA')} + ' BYN'">500 / 500 BYN</span>
+                                </div>
+                            </div>
+                            <a href="/budgets/active" class="btn btn-sm btn-outline-primary mt-2">Подробнее</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list"></i> Последние транзакции
+                    <a href="/transactions" class="btn btn-sm btn-outline-secondary float-end">Все транзакции</a>
+                </div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(recentTransactions)}" class="alert alert-info">
+                        Нет транзакций. <a href="/transactions/add" class="alert-link">Добавить первую транзакцию</a>
+                    </div>
+
+                    <div th:if="${!#lists.isEmpty(recentTransactions)}" class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Описание</th>
+                                <th>Категория</th>
+                                <th>Счет</th>
+                                <th class="text-end">Сумма</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="tx : ${recentTransactions}">
+                                <td th:text="${tx.transactionDate}">2024-01-01</td>
+                                <td th:text="${tx.description}">Продукты</td>
+                                <td th:text="${tx.categoryName}">Еда</td>
+                                <td th:text="${tx.accountName}">Карта</td>
+                                <td class="text-end"
+                                    th:classappend="${tx.type == 'INCOME'} ? 'text-success' : 'text-danger'"
+                                    th:text="${tx.type == 'INCOME'} ? '+' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')} : '-' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')}">
+                                    -100.00
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+    new Chart(expenseCtx, {
+        type: 'pie',
+        data: {
+            labels: /*[[${expenseLabels}]]*/ [],
+            datasets: [{
+                data: /*[[${expenseData}]]*/ [],
+                backgroundColor: [
+                    '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#17a2b8',
+                    '#6f42c1', '#e83e8c', '#20c997', '#007bff', '#6c757d'
+                ]
+            }]
+        }
+    });
+
+    const dailyData = /*[[${dailyExpenses}]]*/ {};
+    const labels = Object.keys(dailyData).slice(-7);
+    const values = Object.values(dailyData).slice(-7);
+
+    const trendCtx = document.getElementById('trendChart').getContext('2d');
+    new Chart(trendCtx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Расходы',
+                data: values,
+                borderColor: '#dc3545',
+                tension: 0.1
+            }]
+        }
+    });
+</script>
+</body>
+</html>

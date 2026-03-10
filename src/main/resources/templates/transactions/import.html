@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head th:replace="~{layout/header :: header('Импорт транзакций')}"></head>
+<body>
+<div th:replace="~{layout/navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div th:replace="~{layout/sidebar}"></div>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Импорт транзакций из файла</h1>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-upload"></i> Загрузите файл выписки
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="/api/v1/transactions/import" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label class="form-label">Выберите счет</label>
+                                <select name="accountId" class="form-select" required>
+                                    <option th:each="acc : ${accounts}"
+                                            th:value="${acc.id}"
+                                            th:text="${acc.name + ' (' + acc.currency + ')'}"></option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Файл выписки (CSV, Excel)</label>
+                                <input type="file" name="file" class="form-control" accept=".csv,.xls,.xlsx" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Формат файла</label>
+                                <select name="format" class="form-select">
+                                    <option value="csv">CSV (запятые)</option>
+                                    <option value="excel">Excel</option>
+                                </select>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-cloud-upload"></i> Загрузить и обработать
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle"></i> Пример формата CSV
+                    </div>
+                    <div class="card-body">
+                            <pre class="bg-light p-3">date,description,amount
+                                                      2024-01-01,Продукты,125.50
+                                                      2024-01-02,АЗС,75.20
+                            </pre>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

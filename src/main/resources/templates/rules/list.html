@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head th:replace="~{layout/header :: header('Правила категоризации')}"></head>
+<body>
+<div th:replace="~{layout/navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div th:replace="~{layout/sidebar}"></div>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Правила категоризации</h1>
+                <a href="/rules/add" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Добавить правило
+                </a>
+            </div>
+
+            <ul class="nav nav-tabs mb-4">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#all">Все правила</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#active">Активные</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div class="tab-pane active" id="all">
+                    <div th:if="${#lists.isEmpty(rules)}" class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> У вас пока нет правил категоризации.
+                        <a href="/rules/add" class="alert-link">Создать правило</a>
+                    </div>
+
+                    <div th:if="${!#lists.isEmpty(rules)}" class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Условие</th>
+                                <th>Категория</th>
+                                <th>Приоритет</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="rule : ${rules}">
+                                <td>
+                                    <span th:text="${rule.field == 'description' ? 'Описание' : 'Сумма'}">Описание</span>
+                                    <span th:text="${rule.operator == 'CONTAINS' ? 'содержит' :
+                                                                      (rule.operator == 'EQUALS' ? 'равно' :
+                                                                      (rule.operator == 'GREATER_THAN' ? '>' : '<'))}">содержит</span>
+                                    <strong th:text="'\'' + ${rule.value} + '\''">"АЗС"</strong>
+                                </td>
+                                <td>
+                                    <span class="badge" th:style="'background-color: ' + ${rule.categoryColor}"> </span>
+                                    <span th:text="${rule.categoryName}">Транспорт</span>
+                                </td>
+                                <td th:text="${rule.priority}">1</td>
+                                <td>
+                                    <span th:if="${rule.isActive}" class="badge bg-success">Активно</span>
+                                    <span th:if="${!rule.isActive}" class="badge bg-secondary">Отключено</span>
+                                </td>
+                                <td>
+                                    <form th:action="@{/rules/{id}/toggle(id=${rule.id})}" method="post"
+                                          style="display: inline;">
+                                        <input type="hidden" name="active" th:value="${!rule.isActive}">
+                                        <button type="submit" class="btn btn-sm"
+                                                th:classappend="${rule.isActive} ? 'btn-outline-warning' : 'btn-outline-success'">
+                                            <i th:class="${rule.isActive} ? 'bi bi-pause' : 'bi bi-play'"></i>
+                                        </button>
+                                    </form>
+                                    <a th:href="@{/rules/{id}/edit(id=${rule.id})}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <form th:action="@{/rules/{id}/delete(id=${rule.id})}" method="post"
+                                          style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                onclick="return confirm('Удалить правило?')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="tab-pane" id="active">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                            <tr>
+                                <th>Условие</th>
+                                <th>Категория</th>
+                                <th>Приоритет</th>
+                                <th>Действия</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="rule : ${activeRules}">
+                                <td>
+                                    <span th:text="${rule.field == 'description' ? 'Описание' : 'Сумма'}">Описание</span>
+                                    <span th:text="${rule.operator == 'CONTAINS' ? 'содержит' :
+                                                                      (rule.operator == 'EQUALS' ? 'равно' :
+                                                                      (rule.operator == 'GREATER_THAN' ? '>' : '<'))}">содержит</span>
+                                    <strong th:text="'\'' + ${rule.value} + '\''">"АЗС"</strong>
+                                </td>
+                                <td>
+                                    <span class="badge" th:style="'background-color: ' + ${rule.categoryColor}"> </span>
+                                    <span th:text="${rule.categoryName}">Транспорт</span>
+                                </td>
+                                <td th:text="${rule.priority}">1</td>
+                                <td>
+                                    <form th:action="@{/rules/{id}/toggle(id=${rule.id})}" method="post"
+                                          style="display: inline;">
+                                        <input type="hidden" name="active" value="false">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-pause"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

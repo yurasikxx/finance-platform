@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<nav th:fragment="sidebar" id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+    <div class="sidebar-sticky pt-3">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="/dashboard"
+                   th:classappend="${#request.requestURI == '/dashboard'} ? 'active' : ''">
+                    <i class="bi bi-speedometer2"></i> Дашборд
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/accounts"
+                   th:classappend="${#request.requestURI.startsWith('/accounts')} ? 'active' : ''">
+                    <i class="bi bi-wallet2"></i> Счета
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/transactions"
+                   th:classappend="${#request.requestURI.startsWith('/transactions')} ? 'active' : ''">
+                    <i class="bi bi-list"></i> Транзакции
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/categories"
+                   th:classappend="${#request.requestURI.startsWith('/categories')} ? 'active' : ''">
+                    <i class="bi bi-tags"></i> Категории
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/budgets/active"
+                   th:classappend="${#request.requestURI.startsWith('/budgets')} ? 'active' : ''">
+                    <i class="bi bi-pie-chart"></i> Бюджет
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/rules"
+                   th:classappend="${#request.requestURI.startsWith('/rules')} ? 'active' : ''">
+                    <i class="bi bi-gear"></i> Правила
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/analytics"
+                   th:classappend="${#request.requestURI.startsWith('/analytics')} ? 'active' : ''">
+                    <i class="bi bi-graph-up"></i> Аналитика
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/profile"
+                   th:classappend="${#request.requestURI.startsWith('/profile')} ? 'active' : ''">
+                    <i class="bi bi-person"></i> Профиль
+                </a>
+            </li>
+        </ul>
+        <hr>
+        <form action="/logout" method="post">
+            <button class="nav-link btn btn-link text-danger" type="submit">
+                <i class="bi bi-box-arrow-right"></i> Выйти
+            </button>
+        </form>
+    </div>
+</nav>

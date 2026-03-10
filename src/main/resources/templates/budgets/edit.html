@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head th:replace="~{layout/header :: header('Редактирование бюджета')}"></head>
+<body>
+<div th:replace="~{layout/navbar}"></div>
+
+<div class="container-fluid">
+    <div class="row">
+        <div th:replace="~{layout/sidebar}"></div>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">Редактирование бюджета</h1>
+            </div>
+
+            <form th:action="@{/budgets/{id}/edit(id=${budgetId})}" th:object="${budget}" method="post"
+                  class="col-md-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle"></i> Основная информация
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Название бюджета</label>
+                            <input type="text" th:field="*{name}" class="form-control" required>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Месяц</label>
+                                <select th:field="*{periodMonth}" class="form-select" required>
+                                    <option th:each="m : ${months}" th:value="${m}" th:text="${m}">1</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Год</label>
+                                <input type="number" th:field="*{periodYear}" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Плановый доход</label>
+                            <input type="number" step="0.01" th:field="*{plannedIncome}" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Описание</label>
+                            <textarea th:field="*{description}" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <i class="bi bi-tags"></i> Лимиты по категориям
+                    </div>
+                    <div class="card-body">
+                        <div th:each="cat : ${categories}" class="row mb-3 align-items-center">
+                            <div class="col-md-6">
+                                <div class="d-flex align-items-center">
+                                    <div th:style="'width: 20px; height: 20px; background-color: ' + ${cat.color} + '; border-radius: 3px; margin-right: 8px;'"></div>
+                                    <span th:text="${cat.name}">Продукты</span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="number" step="0.01"
+                                       th:name="'categoryLimits[' + ${cat.id} + ']'"
+                                       class="form-control"
+                                       th:value="${budget.categoryLimits != null ? budget.categoryLimits.get(cat.id) : ''}"
+                                       placeholder="Лимит">
+                            </div>
+                            <div class="col-md-2">
+                                <span class="text-muted">BYN</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                    <a href="/budgets" class="btn btn-secondary">Отмена</a>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
