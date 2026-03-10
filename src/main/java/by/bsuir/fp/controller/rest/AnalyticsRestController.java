@@ -1,4 +1,4 @@
-package by.bsuir.fp.controller;
+package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.AnalyticsDashboardDto;
 import by.bsuir.fp.controller.dto.AnalyticsRequestDto;
@@ -20,7 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/analytics")
 @RequiredArgsConstructor
-public class AnalyticsController {
+public class AnalyticsRestController {
 
     private final AnalyticsService analyticsService;
 

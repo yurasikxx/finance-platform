@@ -1,4 +1,4 @@
-package by.bsuir.fp.controller;
+package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.CurrencyRateDto;
 import by.bsuir.fp.model.enums.CurrencyCode;
@@ -15,7 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/currency")
 @RequiredArgsConstructor
-public class CurrencyController {
+public class CurrencyRestController {
 
     private final CurrencyService currencyService;
 

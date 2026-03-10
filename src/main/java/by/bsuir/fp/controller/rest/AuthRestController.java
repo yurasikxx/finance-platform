@@ -1,4 +1,4 @@
-package by.bsuir.fp.controller;
+package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.AuthRequest;
 import by.bsuir.fp.controller.dto.AuthResponse;
@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-public class AuthController {
+public class AuthRestController {
 
     private final AuthenticationService authenticationService;
 

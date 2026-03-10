@@ -1,4 +1,4 @@
-package by.bsuir.fp.controller;
+package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
@@ -19,25 +19,25 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/transactions")
 @RequiredArgsConstructor
-public class TransactionController {
+public class TransactionRestController {
 
     private final TransactionService transactionService;
 
     @GetMapping
     public ResponseEntity<Page<TransactionDto>> getTransactions(TransactionFilterDto filter) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.getTransactions(userId, filter));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<TransactionDto> getTransactionById(@PathVariable Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.getTransactionById(userId, id));
     }
 
     @PostMapping
     public ResponseEntity<TransactionDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.createTransaction(userId, transactionDto));
     }
 
@@ -45,20 +45,20 @@ public class TransactionController {
     public ResponseEntity<TransactionDto> updateTransaction(
             @PathVariable Long id,
             @Valid @RequestBody TransactionDto transactionDto) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.updateTransaction(userId, id, transactionDto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTransaction(@PathVariable Long id) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         transactionService.deleteTransaction(userId, id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/uncategorized")
     public ResponseEntity<List<TransactionDto>> getUncategorizedTransactions() {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.getUncategorizedTransactions(userId));
     }
 
@@ -66,7 +66,7 @@ public class TransactionController {
     public ResponseEntity<TransactionDto> categorizeTransaction(
             @PathVariable Long id,
             @RequestParam Long categoryId) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.categorizeTransaction(userId, id, categoryId));
     }
 
@@ -74,11 +74,7 @@ public class TransactionController {
     public ResponseEntity<Map<String, BigDecimal>> getDailyStats(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fromDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate toDate) {
-        Long userId = getCurrentUserId();
+        Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.getDailyStats(userId, fromDate, toDate));
-    }
-
-    private Long getCurrentUserId() {
-        return SecurityUtils.getCurrentUserId();
     }
 }

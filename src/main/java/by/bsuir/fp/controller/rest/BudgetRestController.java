@@ -1,4 +1,4 @@
-package by.bsuir.fp.controller;
+package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.BudgetCreateDto;
 import by.bsuir.fp.controller.dto.BudgetDto;
@@ -14,7 +14,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/budgets")
 @RequiredArgsConstructor
-public class BudgetController {
+public class BudgetRestController {
 
     private final BudgetService budgetService;
 
@@ -37,7 +37,6 @@ public class BudgetController {
     @GetMapping("/{id}")
     public ResponseEntity<BudgetDto> getBudgetById(@PathVariable Long id) {
         Long userId = SecurityUtils.getCurrentUserId();
-        // Добавляем метод в BudgetService
         return budgetService.getBudgetById(userId, id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
