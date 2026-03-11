@@ -19,6 +19,7 @@ public class RuleDto {
     private Long categoryId;
 
     private String categoryName;
+    private String categoryColor;
 
     @NotBlank(message = "Поле для проверки обязательно")
     private String field;  // "description", "amount"

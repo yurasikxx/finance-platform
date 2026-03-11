@@ -21,6 +21,7 @@ public class TransactionDto {
     @NotNull(message = "ID счета обязателен")
     private Long accountId;
 
+    private String accountName;
     private Long categoryId;
     private String categoryName;
 

@@ -14,8 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,29 +42,24 @@ public class AnalyticsService {
             toDate = now;
         }
 
-        LocalDate previousFromDate = fromDate.minusMonths(1);
-        LocalDate previousToDate = toDate.minusMonths(1);
-
-        LocalDate lastYearFromDate = fromDate.minusYears(1);
-        LocalDate lastYearToDate = toDate.minusYears(1);
-
         BigDecimal totalIncome = transactionRepository.getTotalIncomeByPeriod(user, fromDate, toDate);
-        BigDecimal totalExpense = transactionRepository.getTotalExpenseByCategoryAndPeriod(user, null, fromDate, toDate);
+        BigDecimal totalExpense = transactionRepository.getTotalExpenseByPeriod(user, fromDate, toDate);
 
-        List<Object[]> dailyData = transactionRepository.getDailyExpenses(user, fromDate, toDate);
-        List<DailyTotalDto> dailyTotals = aggregateDailyTotals(dailyData, fromDate, toDate);
+        totalIncome = totalIncome != null ? totalIncome : BigDecimal.ZERO;
+        totalExpense = totalExpense != null ? totalExpense : BigDecimal.ZERO;
 
         List<CategoryBreakdownDto> expenseBreakdown = getCategoryBreakdown(user, TransactionType.EXPENSE, fromDate, toDate);
         List<CategoryBreakdownDto> incomeBreakdown = getCategoryBreakdown(user, TransactionType.INCOME, fromDate, toDate);
 
-        PeriodComparisonDto previousPeriod = getPeriodComparison(user, previousFromDate, previousToDate, fromDate, toDate, "Предыдущий месяц");
-        PeriodComparisonDto samePeriodLastYear = getPeriodComparison(user, lastYearFromDate, lastYearToDate, fromDate, toDate, "Прошлый год");
+        List<DailyTotalDto> dailyTotals = getDailyTotals(user, fromDate, toDate);
+
+        PeriodComparisonDto previousPeriod = getPreviousPeriodComparison(user, fromDate, toDate);
+        PeriodComparisonDto samePeriodLastYear = getSamePeriodLastYearComparison(user, fromDate, toDate);
 
         return AnalyticsDashboardDto.builder()
-                .totalIncome(totalIncome != null ? totalIncome : BigDecimal.ZERO)
-                .totalExpense(totalExpense != null ? totalExpense : BigDecimal.ZERO)
-                .netBalance((totalIncome != null ? totalIncome : BigDecimal.ZERO)
-                        .subtract(totalExpense != null ? totalExpense : BigDecimal.ZERO))
+                .totalIncome(totalIncome)
+                .totalExpense(totalExpense)
+                .netBalance(totalIncome.subtract(totalExpense))
                 .expenseBreakdown(expenseBreakdown)
                 .incomeBreakdown(incomeBreakdown)
                 .dailyTotals(dailyTotals)
@@ -84,73 +80,80 @@ public class AnalyticsService {
     private List<CategoryBreakdownDto> getCategoryBreakdown(
             User user, TransactionType type, LocalDate fromDate, LocalDate toDate) {
 
-        List<Object[]> results = new ArrayList<>();
-
-        if (type == TransactionType.EXPENSE) {
-            results = transactionRepository.findByUserAndTypeAndTransactionDateBetweenGroupByCategory(
-                    user, type, fromDate, toDate);
-        }
+        List<Object[]> results = transactionRepository
+                .findByUserAndTypeAndTransactionDateBetweenGroupByCategory(user, type, fromDate, toDate);
 
         BigDecimal total = results.stream()
                 .map(row -> (BigDecimal) row[1])
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return results.stream()
-                .map(row -> {
-                    Category category = (Category) row[0];
-                    BigDecimal amount = (BigDecimal) row[1];
-                    BigDecimal percentage = total.compareTo(BigDecimal.ZERO) > 0 ?
-                            amount.multiply(BigDecimal.valueOf(100))
-                                    .divide(total, 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        List<CategoryBreakdownDto> breakdown = new ArrayList<>();
 
-                    return CategoryBreakdownDto.builder()
-                            .categoryId(category.getId())
-                            .categoryName(category.getName())
-                            .categoryColor(category.getColor())
-                            .amount(amount)
-                            .percentage(percentage)
-                            .build();
-                })
+        for (Object[] row : results) {
+            Category category = (Category) row[0];
+            BigDecimal amount = (BigDecimal) row[1];
+            BigDecimal percentage = total.compareTo(BigDecimal.ZERO) > 0 ?
+                    amount.multiply(BigDecimal.valueOf(100))
+                            .divide(total, 2, RoundingMode.HALF_UP) : BigDecimal.ZERO;
+
+            breakdown.add(CategoryBreakdownDto.builder()
+                    .categoryId(category.getId())
+                    .categoryName(category.getName())
+                    .categoryColor(category.getColor())
+                    .amount(amount)
+                    .percentage(percentage)
+                    .build());
+        }
+
+        return breakdown.stream()
                 .sorted((a, b) -> b.getAmount().compareTo(a.getAmount()))
                 .collect(Collectors.toList());
     }
 
-    private List<DailyTotalDto> aggregateDailyTotals(List<Object[]> dailyData, LocalDate fromDate, LocalDate toDate) {
-        Map<LocalDate, DailyTotalDto> dailyMap = new LinkedHashMap<>();
+    private List<DailyTotalDto> getDailyTotals(User user, LocalDate fromDate, LocalDate toDate) {
+        List<DailyTotalDto> dailyTotals = new ArrayList<>();
 
-        for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
-            DailyTotalDto dto = DailyTotalDto.builder()
-                    .date(date)
-                    .income(BigDecimal.ZERO)
-                    .expense(BigDecimal.ZERO)
-                    .balance(BigDecimal.ZERO)
-                    .build();
-            dailyMap.put(date, dto);
+        List<Object[]> expenses = transactionRepository.getDailyExpenses(user, fromDate, toDate);
+        List<Object[]> incomes = transactionRepository.getDailyIncomes(user, fromDate, toDate);
+
+        Map<LocalDate, BigDecimal> expenseMap = new HashMap<>();
+        Map<LocalDate, BigDecimal> incomeMap = new HashMap<>();
+
+        for (Object[] row : expenses) {
+            expenseMap.put((LocalDate) row[0], (BigDecimal) row[1]);
         }
 
-        for (Object[] row : dailyData) {
-            LocalDate date = (LocalDate) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-
-            DailyTotalDto dto = dailyMap.get(date);
-            if (dto != null) {
-                dto.setExpense(amount);
-                dto.setBalance(dto.getBalance().subtract(amount));
-            }
+        for (Object[] row : incomes) {
+            incomeMap.put((LocalDate) row[0], (BigDecimal) row[1]);
         }
 
-        return new ArrayList<>(dailyMap.values());
+        LocalDate current = fromDate;
+        while (!current.isAfter(toDate)) {
+            BigDecimal expense = expenseMap.getOrDefault(current, BigDecimal.ZERO);
+            BigDecimal income = incomeMap.getOrDefault(current, BigDecimal.ZERO);
+
+            dailyTotals.add(DailyTotalDto.builder()
+                    .date(current)
+                    .income(income)
+                    .expense(expense)
+                    .balance(income.subtract(expense))
+                    .build());
+
+            current = current.plusDays(1);
+        }
+
+        return dailyTotals;
     }
 
-    private PeriodComparisonDto getPeriodComparison(
-            User user, LocalDate prevFrom, LocalDate prevTo,
-            LocalDate currFrom, LocalDate currTo, String periodName) {
+    private PeriodComparisonDto getPreviousPeriodComparison(User user, LocalDate fromDate, LocalDate toDate) {
+        LocalDate prevFrom = fromDate.minusMonths(1);
+        LocalDate prevTo = toDate.minusMonths(1);
 
         BigDecimal prevIncome = transactionRepository.getTotalIncomeByPeriod(user, prevFrom, prevTo);
-        BigDecimal prevExpense = transactionRepository.getTotalExpenseByCategoryAndPeriod(user, null, prevFrom, prevTo);
+        BigDecimal prevExpense = transactionRepository.getTotalExpenseByPeriod(user, prevFrom, prevTo);
 
-        BigDecimal currIncome = transactionRepository.getTotalIncomeByPeriod(user, currFrom, currTo);
-        BigDecimal currExpense = transactionRepository.getTotalExpenseByCategoryAndPeriod(user, null, currFrom, currTo);
+        BigDecimal currIncome = transactionRepository.getTotalIncomeByPeriod(user, fromDate, toDate);
+        BigDecimal currExpense = transactionRepository.getTotalExpenseByPeriod(user, fromDate, toDate);
 
         prevIncome = prevIncome != null ? prevIncome : BigDecimal.ZERO;
         prevExpense = prevExpense != null ? prevExpense : BigDecimal.ZERO;
@@ -160,10 +163,42 @@ public class AnalyticsService {
         BigDecimal incomeChange = calculatePercentageChange(currIncome, prevIncome);
         BigDecimal expenseChange = calculatePercentageChange(currExpense, prevExpense);
 
+        String periodName = prevFrom.format(DateTimeFormatter.ofPattern("dd.MM")) + " - " +
+                prevTo.format(DateTimeFormatter.ofPattern("dd.MM"));
+
         return PeriodComparisonDto.builder()
                 .periodName(periodName)
-                .income(currIncome)
-                .expense(currExpense)
+                .currentIncome(currIncome)
+                .currentExpense(currExpense)
+                .previousIncome(prevIncome)
+                .previousExpense(prevExpense)
+                .incomeChange(incomeChange)
+                .expenseChange(expenseChange)
+                .build();
+    }
+
+    private PeriodComparisonDto getSamePeriodLastYearComparison(User user, LocalDate fromDate, LocalDate toDate) {
+        LocalDate lastYearFrom = fromDate.minusYears(1);
+        LocalDate lastYearTo = toDate.minusYears(1);
+
+        BigDecimal lastYearIncome = transactionRepository.getTotalIncomeByPeriod(user, lastYearFrom, lastYearTo);
+        BigDecimal lastYearExpense = transactionRepository.getTotalExpenseByPeriod(user, lastYearFrom, lastYearTo);
+
+        BigDecimal currIncome = transactionRepository.getTotalIncomeByPeriod(user, fromDate, toDate);
+        BigDecimal currExpense = transactionRepository.getTotalExpenseByPeriod(user, fromDate, toDate);
+
+        lastYearIncome = lastYearIncome != null ? lastYearIncome : BigDecimal.ZERO;
+        lastYearExpense = lastYearExpense != null ? lastYearExpense : BigDecimal.ZERO;
+        currIncome = currIncome != null ? currIncome : BigDecimal.ZERO;
+        currExpense = currExpense != null ? currExpense : BigDecimal.ZERO;
+
+        BigDecimal incomeChange = calculatePercentageChange(currIncome, lastYearIncome);
+        BigDecimal expenseChange = calculatePercentageChange(currExpense, lastYearExpense);
+
+        return PeriodComparisonDto.builder()
+                .periodName("Аналогичный период прошлого года")
+                .currentIncome(currIncome)
+                .currentExpense(currExpense)
                 .balance(currIncome.subtract(currExpense))
                 .incomeChange(incomeChange)
                 .expenseChange(expenseChange)

@@ -12,7 +12,7 @@
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                 <h1 class="h2">Дашборд</h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
-                    <span th:text="${currentDate}" class="me-3">01.01.2026</span>
+                    <span th:text="${currentDate}" class="me-3">01.01.2024</span>
                 </div>
             </div>
 
@@ -21,8 +21,8 @@
                     <div class="card bg-primary text-white">
                         <div class="card-body">
                             <h5 class="card-title">Общий баланс</h5>
-                            <h3 th:text="${totalBalance != null} ? ${#numbers.formatDecimal(totalBalance, 1, 2, 'COMMA')} + ' BYN' : '0.00 BYN'">
-                                0.00 BYN</h3>
+                            <h3 th:text="${totalBalance != null} ? ${#numbers.formatDecimal(totalBalance, 1, 2, 'COMMA')} + ' BYN' : '0,00 BYN'">
+                                0,00 BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -30,8 +30,8 @@
                     <div class="card bg-success text-white">
                         <div class="card-body">
                             <h5 class="card-title">Доходы за месяц</h5>
-                            <h3 th:text="${monthlyIncome != null} ? ${#numbers.formatDecimal(monthlyIncome, 1, 2, 'COMMA')} + ' BYN' : '0.00 BYN'">
-                                0.00 BYN</h3>
+                            <h3 th:text="${monthlyIncome != null} ? ${#numbers.formatDecimal(monthlyIncome, 1, 2, 'COMMA')} + ' BYN' : '0,00 BYN'">
+                                0,00 BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -39,8 +39,8 @@
                     <div class="card bg-danger text-white">
                         <div class="card-body">
                             <h5 class="card-title">Расходы за месяц</h5>
-                            <h3 th:text="${monthlyExpense != null} ? ${#numbers.formatDecimal(monthlyExpense, 1, 2, 'COMMA')} + ' BYN' : '0.00 BYN'">
-                                0.00 BYN</h3>
+                            <h3 th:text="${monthlyExpense != null} ? ${#numbers.formatDecimal(monthlyExpense, 1, 2, 'COMMA')} + ' BYN' : '0,00 BYN'">
+                                0,00 BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -49,8 +49,8 @@
                          th:classappend="${netBalance != null && netBalance >= 0} ? 'bg-info text-white' : 'bg-warning'">
                         <div class="card-body">
                             <h5 class="card-title">Чистый доход</h5>
-                            <h3 th:text="${netBalance != null} ? ${#numbers.formatDecimal(netBalance, 1, 2, 'COMMA')} + ' BYN' : '0.00 BYN'">
-                                0.00 BYN</h3>
+                            <h3 th:text="${netBalance != null} ? ${#numbers.formatDecimal(netBalance, 1, 2, 'COMMA')} + ' BYN' : '0,00 BYN'">
+                                0,00 BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -63,7 +63,7 @@
                             <i class="bi bi-pie-chart"></i> Структура расходов
                         </div>
                         <div class="card-body">
-                            <canvas id="expenseChart" style="height: 300px;"></canvas>
+                            <canvas id="expenseChart" style="height: 300px; width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                             <i class="bi bi-graph-up"></i> Динамика за месяц
                         </div>
                         <div class="card-body">
-                            <canvas id="trendChart" style="height: 300px;"></canvas>
+                            <canvas id="trendChart" style="height: 300px; width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -137,8 +137,8 @@
                                 <td th:text="${tx.categoryName}">Еда</td>
                                 <td th:text="${tx.accountName}">Карта</td>
                                 <td class="text-end"
-                                    th:classappend="${tx.type == 'INCOME'} ? 'text-success' : 'text-danger'"
-                                    th:text="${tx.type == 'INCOME'} ? '+' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')} : '-' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')}">
+                                    th:classappend="${tx.type.name() == 'INCOME'} ? 'text-success' : 'text-danger'"
+                                    th:text="${tx.type.name() == 'INCOME'} ? '+' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')} : '-' + ${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')}">
                                     -100.00
                                 </td>
                             </tr>
@@ -158,7 +158,7 @@
     const expenseLabels = /*[[${expenseLabels}]]*/ [];
     const expenseData = /*[[${expenseData}]]*/ [];
 
-    if (expenseLabels.length > 0 && expenseData.length > 0) {
+    if (expenseLabels && expenseLabels.length > 0 && expenseData && expenseData.length > 0) {
         const expenseCtx = document.getElementById('expenseChart').getContext('2d');
         new Chart(expenseCtx, {
             type: 'pie',
@@ -171,28 +171,76 @@
                         '#6f42c1', '#e83e8c', '#20c997', '#007bff', '#6c757d'
                     ]
                 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
             }
         });
+    } else {
+        document.getElementById('expenseChart').style.display = 'none';
+        document.getElementById('expenseChart').insertAdjacentHTML('afterend',
+            '<p class="text-muted text-center">Нет данных о расходах за период</p>');
     }
 
-    const dailyData = /*[[${dailyExpenses}]]*/ {};
-    if (dailyData && Object.keys(dailyData).length > 0) {
-        const labels = Object.keys(dailyData).slice(-7);
-        const values = Object.values(dailyData).slice(-7);
+    const dateLabels = /*[[${dateLabels}]]*/ [];
+    const expenseValues = /*[[${expenseValues}]]*/ [];
+    const incomeValues = /*[[${incomeValues}]]*/ [];
 
+    if (dateLabels && dateLabels.length > 0) {
         const trendCtx = document.getElementById('trendChart').getContext('2d');
         new Chart(trendCtx, {
             type: 'line',
             data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Расходы',
-                    data: values,
-                    borderColor: '#dc3545',
-                    tension: 0.1
-                }]
+                labels: dateLabels,
+                datasets: [
+                    {
+                        label: 'Доходы',
+                        data: incomeValues,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Расходы',
+                        data: expenseValues,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.1,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' BYN';
+                            }
+                        }
+                    }
+                }
             }
         });
+    } else {
+        document.getElementById('trendChart').style.display = 'none';
+        document.getElementById('trendChart').insertAdjacentHTML('afterend',
+            '<p class="text-muted text-center">Нет данных о динамике за период</p>');
     }
     /*]]>*/
 </script>

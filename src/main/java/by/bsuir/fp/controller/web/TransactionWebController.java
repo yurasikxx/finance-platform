@@ -1,10 +1,12 @@
 package by.bsuir.fp.controller.web;
 
+import by.bsuir.fp.controller.dto.ImportResult;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.AccountService;
 import by.bsuir.fp.service.CategoryService;
+import by.bsuir.fp.service.ImportService;
 import by.bsuir.fp.service.TransactionService;
 import by.bsuir.fp.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,8 +15,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Controller
@@ -25,6 +29,7 @@ public class TransactionWebController {
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategoryService categoryService;
+    private final ImportService importService;
 
     @GetMapping
     public String list(
@@ -32,9 +37,14 @@ public class TransactionWebController {
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) TransactionType type,
-            Model model, HttpServletRequest request) {
+            Model model,
+            HttpServletRequest request) {
 
         Long userId = SecurityUtils.getCurrentUserId();
+
+        if (page < 0) {
+            page = 0;
+        }
 
         TransactionFilterDto filter = new TransactionFilterDto();
         filter.setPage(page);
@@ -49,6 +59,9 @@ public class TransactionWebController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", transactionsPage.getTotalPages());
         model.addAttribute("totalElements", transactionsPage.getTotalElements());
+
+        model.addAttribute("hasPrevious", transactionsPage.hasPrevious());
+        model.addAttribute("hasNext", transactionsPage.hasNext());
 
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
         model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
@@ -91,6 +104,11 @@ public class TransactionWebController {
         Long userId = SecurityUtils.getCurrentUserId();
 
         TransactionDto transaction = transactionService.getTransactionById(userId, id);
+
+        if (transaction.getTransactionDate() != null) {
+            model.addAttribute("transactionDateStr",
+                    transaction.getTransactionDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
+        }
 
         model.addAttribute("transaction", transaction);
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
@@ -137,6 +155,34 @@ public class TransactionWebController {
         model.addAttribute("currentUri", request.getRequestURI());
 
         return "transactions/import";
+    }
+
+    @PostMapping("/import")
+    public String importTransactions(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("accountId") Long accountId,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            Long userId = SecurityUtils.getCurrentUserId();
+            ImportResult result = importService.importFromCsv(userId, accountId, file);
+
+            if (result.getErrorCount() == 0) {
+                redirectAttributes.addFlashAttribute("success",
+                        "Успешно импортировано " + result.getSuccessCount() + " транзакций");
+            } else {
+                redirectAttributes.addFlashAttribute("warning",
+                        "Импортировано " + result.getSuccessCount() + " из " + result.getTotalCount() +
+                                ". Ошибок: " + result.getErrorCount());
+
+                redirectAttributes.addFlashAttribute("importErrors", result.getErrors());
+            }
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка импорта: " + e.getMessage());
+        }
+
+        return "redirect:/transactions";
     }
 
     @GetMapping("/uncategorized")

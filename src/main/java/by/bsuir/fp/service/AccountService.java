@@ -112,6 +112,13 @@ public class AccountService {
         return total != null ? total : BigDecimal.ZERO;
     }
 
+    @Transactional(readOnly = true)
+    public long countUserAccounts(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        return accountRepository.countByUser(user);
+    }
+
     private AccountDto mapToDto(Account account) {
         return AccountDto.builder()
                 .id(account.getId())

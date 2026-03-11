@@ -3,6 +3,9 @@ package by.bsuir.fp.controller.web;
 import by.bsuir.fp.controller.dto.UserRegistrationDto;
 import by.bsuir.fp.controller.dto.UserResponseDto;
 import by.bsuir.fp.model.enums.CurrencyCode;
+import by.bsuir.fp.service.AccountService;
+import by.bsuir.fp.service.CategorizationRuleService;
+import by.bsuir.fp.service.TransactionService;
 import by.bsuir.fp.service.UserService;
 import by.bsuir.fp.util.SecurityUtils;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,11 +24,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 public class ProfileWebController {
 
     private final UserService userService;
+    private final TransactionService transactionService;
+    private final AccountService accountService;
+    private final CategorizationRuleService ruleService;
 
     @GetMapping
     public String profile(Model model, HttpServletRequest request) {
         Long userId = SecurityUtils.getCurrentUserId();
         UserResponseDto user = userService.getUserById(userId);
+
+        model.addAttribute("totalTransactions", transactionService.countUserTransactions(userId));
+        model.addAttribute("totalAccounts", accountService.countUserAccounts(userId));
+        model.addAttribute("activeRules", ruleService.countActiveRules(userId));
 
         model.addAttribute("user", user);
         model.addAttribute("currentUri", request.getRequestURI());

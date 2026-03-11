@@ -32,7 +32,7 @@
                     <div class="card">
                         <div class="card-body">
                             <h5 class="card-title" th:text="${account.name}">Наличные</h5>
-                            <h6 class="card-subtitle mb-2 text-muted" th:text="${account.type}">CASH</h6>
+                            <h6 class="card-subtitle mb-2 text-muted" th:text="${account.type.description}">Наличные</h6>
                             <h3 th:text="${#numbers.formatDecimal(account.currentBalance, 1, 2, 'COMMA')} + ' ' + ${account.currency}">
                                 1000.00 BYN</h3>
                             <p class="card-text" th:text="${account.description}">Описание</p>

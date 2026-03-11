@@ -15,11 +15,8 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     List<Account> findByUser(User user);
 
-    List<Account> findByUserAndType(User user, String type);
+    long countByUser(User user);
 
-    boolean existsByUserAndName(User user, String name);
-
-    // Получение суммарного баланса пользователя по всем счетам
     @Query("SELECT SUM(a.currentBalance) FROM Account a WHERE a.user = :user")
     BigDecimal getTotalBalanceByUser(@Param("user") User user);
 }

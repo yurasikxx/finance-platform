@@ -20,10 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,30 +77,11 @@ public class TransactionService {
         return mapToDto(savedTransaction);
     }
 
-    private void applyCategorizationRules(Transaction transaction, User user) {
-        List<CategorizationRule> rules = ruleRepository
-                .findByUserAndIsActiveTrueOrderByPriorityDesc(user);
-
-        Map<String, CategorizationStrategy> strategyMap = new HashMap<>();
-        strategyMap.put("description", descriptionStrategy);
-        strategyMap.put("amount", amountStrategy);
-
-        for (CategorizationRule rule : rules) {
-            CategorizationStrategy strategy = strategyMap.get(rule.getField());
-            if (strategy != null && strategy.matches(transaction, rule)) {
-                transaction.setCategory(rule.getCategory());
-                transaction.setIsCategorized(true);
-                break;
-            }
-        }
-    }
-
-    private BigDecimal updateBalance(BigDecimal currentBalance, BigDecimal amount, TransactionType type) {
-        return switch (type) {
-            case INCOME -> currentBalance.add(amount);
-            case EXPENSE -> currentBalance.subtract(amount);
-            case TRANSFER -> currentBalance; // обрабатывается отдельно
-        };
+    @Transactional(readOnly = true)
+    public long countUserTransactions(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        return transactionRepository.countByUser(user);
     }
 
     @Transactional(readOnly = true)
@@ -167,16 +145,26 @@ public class TransactionService {
         TransactionType oldType = transaction.getType();
         Account oldAccount = transaction.getAccount();
 
-        if (dto.getAccountId() != null && !dto.getAccountId().equals(transaction.getAccount().getId())) {
+        boolean accountChanged = !oldAccount.getId().equals(dto.getAccountId());
+
+        if (accountChanged) {
+            if (oldType == TransactionType.INCOME) {
+                oldAccount.setCurrentBalance(oldAccount.getCurrentBalance().subtract(oldAmount));
+            } else if (oldType == TransactionType.EXPENSE) {
+                oldAccount.setCurrentBalance(oldAccount.getCurrentBalance().add(oldAmount));
+            }
+            accountRepository.save(oldAccount);
+        }
+
+        boolean amountOrTypeChanged = !oldAmount.equals(dto.getAmount()) || oldType != dto.getType();
+
+        if (dto.getAccountId() != null && !oldAccount.getId().equals(dto.getAccountId())) {
             Account newAccount = accountRepository.findById(dto.getAccountId())
                     .orElseThrow(() -> new AccountNotFoundException("Счет не найден"));
 
             if (!newAccount.getUser().getId().equals(userId)) {
                 throw new SecurityException("Нет доступа к этому счету");
             }
-
-            oldAccount.setCurrentBalance(reverseBalanceUpdate(oldAccount.getCurrentBalance(), oldAmount, oldType));
-            accountRepository.save(oldAccount);
 
             transaction.setAccount(newAccount);
         }
@@ -199,22 +187,31 @@ public class TransactionService {
 
         Transaction updatedTransaction = transactionRepository.save(transaction);
 
-        Account currentAccount = updatedTransaction.getAccount();
-        currentAccount.setCurrentBalance(updateBalance(
-                currentAccount.getCurrentBalance(),
-                updatedTransaction.getAmount(),
-                updatedTransaction.getType()));
-        accountRepository.save(currentAccount);
+        Account targetAccount = updatedTransaction.getAccount();
+
+        if (accountChanged) {
+            if (updatedTransaction.getType() == TransactionType.INCOME) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().add(updatedTransaction.getAmount()));
+            } else if (updatedTransaction.getType() == TransactionType.EXPENSE) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().subtract(updatedTransaction.getAmount()));
+            }
+        } else if (amountOrTypeChanged) {
+            if (oldType == TransactionType.INCOME) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().subtract(oldAmount));
+            } else if (oldType == TransactionType.EXPENSE) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().add(oldAmount));
+            }
+
+            if (updatedTransaction.getType() == TransactionType.INCOME) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().add(updatedTransaction.getAmount()));
+            } else if (updatedTransaction.getType() == TransactionType.EXPENSE) {
+                targetAccount.setCurrentBalance(targetAccount.getCurrentBalance().subtract(updatedTransaction.getAmount()));
+            }
+        }
+
+        accountRepository.save(targetAccount);
 
         return mapToDto(updatedTransaction);
-    }
-
-    private BigDecimal reverseBalanceUpdate(BigDecimal currentBalance, BigDecimal amount, TransactionType type) {
-        return switch (type) {
-            case INCOME -> currentBalance.subtract(amount);
-            case EXPENSE -> currentBalance.add(amount);
-            case TRANSFER -> currentBalance;
-        };
     }
 
     @Transactional
@@ -270,8 +267,10 @@ public class TransactionService {
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
 
         BigDecimal income = transactionRepository.getTotalIncomeByPeriod(user, fromDate, toDate);
-        BigDecimal expense = transactionRepository.getTotalExpenseByCategoryAndPeriod(
-                user, null, fromDate, toDate);
+        BigDecimal expense = transactionRepository.getTotalExpenseByPeriod(user, fromDate, toDate);
+
+        income = income != null ? income : BigDecimal.ZERO;
+        expense = expense != null ? expense : BigDecimal.ZERO;
 
         Map<String, BigDecimal> stats = new HashMap<>();
         stats.put("income", income);
@@ -281,10 +280,91 @@ public class TransactionService {
         return stats;
     }
 
+    @Transactional(readOnly = true)
+    public Map<LocalDate, BigDecimal> getDailyExpenses(Long userId, LocalDate fromDate, LocalDate toDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        List<Object[]> results = transactionRepository.getDailyExpenses(user, fromDate, toDate);
+        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
+
+        LocalDate date = fromDate;
+        while (!date.isAfter(toDate)) {
+            dailyMap.put(date, BigDecimal.ZERO);
+            date = date.plusDays(1);
+        }
+
+        for (Object[] row : results) {
+            LocalDate rowDate = (LocalDate) row[0];
+            BigDecimal amount = (BigDecimal) row[1];
+            dailyMap.put(rowDate, amount);
+        }
+
+        return dailyMap;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<LocalDate, BigDecimal> getDailyIncomes(Long userId, LocalDate fromDate, LocalDate toDate) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        List<Object[]> results = transactionRepository.getDailyIncomes(user, fromDate, toDate);
+        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
+
+        LocalDate date = fromDate;
+        while (!date.isAfter(toDate)) {
+            dailyMap.put(date, BigDecimal.ZERO);
+            date = date.plusDays(1);
+        }
+
+        for (Object[] row : results) {
+            LocalDate rowDate = (LocalDate) row[0];
+            BigDecimal amount = (BigDecimal) row[1];
+            dailyMap.put(rowDate, amount);
+        }
+
+        return dailyMap;
+    }
+
+    private void applyCategorizationRules(Transaction transaction, User user) {
+        List<CategorizationRule> rules = ruleRepository
+                .findByUserAndIsActiveTrueOrderByPriorityDesc(user);
+
+        Map<String, CategorizationStrategy> strategyMap = new HashMap<>();
+        strategyMap.put("description", descriptionStrategy);
+        strategyMap.put("amount", amountStrategy);
+
+        for (CategorizationRule rule : rules) {
+            CategorizationStrategy strategy = strategyMap.get(rule.getField());
+            if (strategy != null && strategy.matches(transaction, rule)) {
+                transaction.setCategory(rule.getCategory());
+                transaction.setIsCategorized(true);
+                break;
+            }
+        }
+    }
+
+    private BigDecimal updateBalance(BigDecimal currentBalance, BigDecimal amount, TransactionType type) {
+        return switch (type) {
+            case INCOME -> currentBalance.add(amount);
+            case EXPENSE -> currentBalance.subtract(amount);
+            case TRANSFER -> currentBalance;
+        };
+    }
+
+    private BigDecimal reverseBalanceUpdate(BigDecimal currentBalance, BigDecimal amount, TransactionType type) {
+        return switch (type) {
+            case INCOME -> currentBalance.subtract(amount);
+            case EXPENSE -> currentBalance.add(amount);
+            case TRANSFER -> currentBalance;
+        };
+    }
+
     private TransactionDto mapToDto(Transaction transaction) {
         return TransactionDto.builder()
                 .id(transaction.getId())
                 .accountId(transaction.getAccount().getId())
+                .accountName(transaction.getAccount().getName())
                 .categoryId(transaction.getCategory() != null ? transaction.getCategory().getId() : null)
                 .categoryName(transaction.getCategory() != null ? transaction.getCategory().getName() : null)
                 .type(transaction.getType())

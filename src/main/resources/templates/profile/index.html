@@ -53,15 +53,15 @@
                         <div class="card-body">
                             <div class="row text-center">
                                 <div class="col-md-4">
-                                    <h3 id="totalTransactions">0</h3>
+                                    <h3 th:text="${totalTransactions}">0</h3>
                                     <span class="text-muted">Всего транзакций</span>
                                 </div>
                                 <div class="col-md-4">
-                                    <h3 id="totalAccounts">0</h3>
+                                    <h3 th:text="${totalAccounts}">0</h3>
                                     <span class="text-muted">Активных счетов</span>
                                 </div>
                                 <div class="col-md-4">
-                                    <h3 id="activeRules">0</h3>
+                                    <h3 th:text="${activeRules}">0</h3>
                                     <span class="text-muted">Активных правил</span>
                                 </div>
                             </div>

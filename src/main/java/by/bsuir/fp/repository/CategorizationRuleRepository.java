@@ -10,12 +10,9 @@ import java.util.List;
 @Repository
 public interface CategorizationRuleRepository extends JpaRepository<CategorizationRule, Long> {
 
-    // Все активные правила пользователя, отсортированные по приоритету
     List<CategorizationRule> findByUserAndIsActiveTrueOrderByPriorityDesc(User user);
 
-    // Все правила пользователя
     List<CategorizationRule> findByUser(User user);
 
-    // Правила для конкретного поля
-    List<CategorizationRule> findByUserAndField(User user, String field);
+    long countByUserAndIsActiveTrue(User user);
 }

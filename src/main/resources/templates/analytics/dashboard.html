@@ -13,10 +13,10 @@
                 <h1 class="h2">Аналитика</h1>
                 <form method="get" class="row g-3">
                     <div class="col-auto">
-                        <input type="date" name="fromDate" class="form-control" th:value="${fromDate}">
+                        <input type="date" name="fromDate" class="form-control" th:value="${fromDateInput}">
                     </div>
                     <div class="col-auto">
-                        <input type="date" name="toDate" class="form-control" th:value="${toDate}">
+                        <input type="date" name="toDate" class="form-control" th:value="${toDateInput}">
                     </div>
                     <div class="col-auto">
                         <button type="submit" class="btn btn-primary">Обновить</button>
@@ -29,8 +29,8 @@
                     <div class="card bg-success text-white">
                         <div class="card-body">
                             <h5 class="card-title">Доходы</h5>
-                            <h3 th:text="${#numbers.formatDecimal(dashboard.totalIncome, 1, 2, 'COMMA')} + ' BYN'">
-                                1000.00 BYN</h3>
+                            <h3 th:text="${#numbers.formatDecimal(dashboard.totalIncome, 1, 2, 'COMMA')} + ' BYN'">0,00
+                                BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -38,8 +38,8 @@
                     <div class="card bg-danger text-white">
                         <div class="card-body">
                             <h5 class="card-title">Расходы</h5>
-                            <h3 th:text="${#numbers.formatDecimal(dashboard.totalExpense, 1, 2, 'COMMA')} + ' BYN'">
-                                600.00 BYN</h3>
+                            <h3 th:text="${#numbers.formatDecimal(dashboard.totalExpense, 1, 2, 'COMMA')} + ' BYN'">0,00
+                                BYN</h3>
                         </div>
                     </div>
                 </div>
@@ -48,7 +48,7 @@
                          th:classappend="${dashboard.netBalance >= 0} ? 'bg-primary text-white' : 'bg-warning'">
                         <div class="card-body">
                             <h5 class="card-title">Баланс</h5>
-                            <h3 th:text="${#numbers.formatDecimal(dashboard.netBalance, 1, 2, 'COMMA')} + ' BYN'">400.00
+                            <h3 th:text="${#numbers.formatDecimal(dashboard.netBalance, 1, 2, 'COMMA')} + ' BYN'">0,00
                                 BYN</h3>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
                             <i class="bi bi-pie-chart"></i> Структура расходов
                         </div>
                         <div class="card-body">
-                            <canvas id="expenseChart" style="height: 300px;"></canvas>
+                            <canvas id="expenseChart" style="height: 300px; width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
                             <i class="bi bi-graph-up"></i> Динамика доходов/расходов
                         </div>
                         <div class="card-body">
-                            <canvas id="trendChart" style="height: 300px;"></canvas>
+                            <canvas id="trendChart" style="height: 300px; width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -87,48 +87,57 @@
                         </div>
                         <div class="card-body">
                             <table class="table">
+                                <thead>
                                 <tr>
                                     <th></th>
-                                    <th>Текущий период</th>
-                                    <th th:text="${dashboard.previousPeriod.periodName}">Прошлый месяц</th>
+                                    <th>Текущий период<br><small class="text-muted"
+                                                                 th:text="${fromDateDisplay} + ' - ' + ${toDateDisplay}">01.03-31.03</small>
+                                    </th>
+                                    <th>Прошлый период<br><small class="text-muted"
+                                                                 th:text="${dashboard.previousPeriod.periodName}">01.02-28.02</small>
+                                    </th>
                                     <th>Изменение</th>
                                 </tr>
+                                </thead>
+                                <tbody>
                                 <tr>
                                     <td>Доходы</td>
-                                    <td th:text="${#numbers.formatDecimal(dashboard.totalIncome, 1, 2, 'COMMA')} + ' BYN'">
-                                        1000
+                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.currentIncome, 1, 2, 'COMMA')} + ' BYN'">
+                                        2100,00 BYN
                                     </td>
-                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.income, 1, 2, 'COMMA')} + ' BYN'">
-                                        900
+                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.previousIncome, 1, 2, 'COMMA')} + ' BYN'">
+                                        0,00 BYN
                                     </td>
                                     <td>
-                                            <span th:if="${dashboard.previousPeriod.incomeChange >= 0}"
-                                                  class="text-success">
-                                                +<span th:text="${dashboard.previousPeriod.incomeChange} + '%'"></span>
-                                            </span>
+                                        <span th:if="${dashboard.previousPeriod.incomeChange > 0}" class="text-success">
+                                            +<span th:text="${dashboard.previousPeriod.incomeChange} + '%'"></span>
+                                        </span>
                                         <span th:if="${dashboard.previousPeriod.incomeChange < 0}" class="text-danger">
-                                                <span th:text="${dashboard.previousPeriod.incomeChange} + '%'"></span>
-                                            </span>
+                                            <span th:text="${dashboard.previousPeriod.incomeChange} + '%'"></span>
+                                        </span>
+                                        <span th:if="${dashboard.previousPeriod.incomeChange == 0}" class="text-muted">0%</span>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td>Расходы</td>
-                                    <td th:text="${#numbers.formatDecimal(dashboard.totalExpense, 1, 2, 'COMMA')} + ' BYN'">
-                                        600
+                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.currentExpense, 1, 2, 'COMMA')} + ' BYN'">
+                                        1131,00 BYN
                                     </td>
-                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.expense, 1, 2, 'COMMA')} + ' BYN'">
-                                        500
+                                    <td th:text="${#numbers.formatDecimal(dashboard.previousPeriod.previousExpense, 1, 2, 'COMMA')} + ' BYN'">
+                                        0,00 BYN
                                     </td>
                                     <td>
-                                            <span th:if="${dashboard.previousPeriod.expenseChange <= 0}"
-                                                  class="text-success">
-                                                <span th:text="${dashboard.previousPeriod.expenseChange} + '%'"></span>
-                                            </span>
                                         <span th:if="${dashboard.previousPeriod.expenseChange > 0}" class="text-danger">
-                                                +<span th:text="${dashboard.previousPeriod.expenseChange} + '%'"></span>
-                                            </span>
+                                            +<span th:text="${dashboard.previousPeriod.expenseChange} + '%'"></span>
+                                        </span>
+                                        <span th:if="${dashboard.previousPeriod.expenseChange < 0}"
+                                              class="text-success">
+                                            <span th:text="${dashboard.previousPeriod.expenseChange} + '%'"></span>
+                                        </span>
+                                        <span th:if="${dashboard.previousPeriod.expenseChange == 0}" class="text-muted">0%</span>
                                     </td>
                                 </tr>
+                                </tbody>
                             </table>
                         </div>
                     </div>
@@ -169,50 +178,99 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const expenseCtx = document.getElementById('expenseChart').getContext('2d');
-    new Chart(expenseCtx, {
-        type: 'pie',
-        data: {
-            labels: /*[[${expenseLabels}]]*/ [],
-            datasets: [{
-                data: /*[[${expenseData}]]*/ [],
-                backgroundColor: [
-                    '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#17a2b8',
-                    '#6f42c1', '#e83e8c', '#20c997', '#007bff', '#6c757d'
-                ]
-            }]
-        }
-    });
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const expenseLabels = /*[[${expenseLabels}]]*/ [];
+    const expenseData = /*[[${expenseData}]]*/ [];
 
-    const trendCtx = document.getElementById('trendChart').getContext('2d');
-    new Chart(trendCtx, {
-        type: 'line',
-        data: {
-            labels: /*[[${dailyLabels}]]*/ [],
-            datasets: [
-                {
-                    label: 'Доходы',
-                    data: /*[[${dailyIncome}]]*/ [],
-                    borderColor: '#28a745',
-                    tension: 0.1
-                },
-                {
-                    label: 'Расходы',
-                    data: /*[[${dailyExpense}]]*/ [],
-                    borderColor: '#dc3545',
-                    tension: 0.1
-                }
-            ]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
+    console.log('Analytics - Expense Labels:', expenseLabels);
+    console.log('Analytics - Expense Data:', expenseData);
+
+    if (expenseLabels && expenseLabels.length > 0 && expenseData && expenseData.length > 0) {
+        const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+        new Chart(expenseCtx, {
+            type: 'pie',
+            data: {
+                labels: expenseLabels,
+                datasets: [{
+                    data: expenseData,
+                    backgroundColor: [
+                        '#dc3545', '#fd7e14', '#ffc107', '#28a745', '#17a2b8',
+                        '#6f42c1', '#e83e8c', '#20c997', '#007bff', '#6c757d'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
                 }
             }
-        }
-    });
+        });
+    } else {
+        document.getElementById('expenseChart').style.display = 'none';
+        document.getElementById('expenseChart').insertAdjacentHTML('afterend',
+            '<p class="text-muted text-center">Нет данных о расходах за период</p>');
+    }
+
+    const dateLabels = /*[[${dateLabels}]]*/ [];
+    const expenseValues = /*[[${expenseValues}]]*/ [];
+    const incomeValues = /*[[${incomeValues}]]*/ [];
+
+    if (dateLabels && dateLabels.length > 0) {
+        const trendCtx = document.getElementById('trendChart').getContext('2d');
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: dateLabels,
+                datasets: [
+                    {
+                        label: 'Доходы',
+                        data: incomeValues,
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        tension: 0.1,
+                        fill: false
+                    },
+                    {
+                        label: 'Расходы',
+                        data: expenseValues,
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        tension: 0.1,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return value + ' BYN';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('trendChart').style.display = 'none';
+        document.getElementById('trendChart').insertAdjacentHTML('afterend',
+            '<p class="text-muted text-center">Нет данных о динамике за период</p>');
+    }
+    /*]]>*/
 </script>
 </body>
 </html>

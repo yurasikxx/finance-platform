@@ -89,6 +89,13 @@ public class BudgetWebController {
     public String create(@ModelAttribute BudgetCreateDto budgetCreate, RedirectAttributes redirectAttributes) {
         try {
             Long userId = SecurityUtils.getCurrentUserId();
+
+            if (budgetCreate.getCategoryLimits() != null) {
+                budgetCreate.getCategoryLimits().entrySet().removeIf(
+                        entry -> entry.getValue() == null || entry.getValue().compareTo(BigDecimal.ZERO) <= 0
+                );
+            }
+
             budgetService.createBudget(userId, budgetCreate);
             redirectAttributes.addFlashAttribute("success", "Бюджет создан");
         } catch (Exception e) {

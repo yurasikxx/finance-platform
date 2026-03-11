@@ -19,7 +19,7 @@
                         <i class="bi bi-upload"></i> Загрузите файл выписки
                     </div>
                     <div class="card-body">
-                        <form method="post" action="/api/v1/transactions/import" enctype="multipart/form-data">
+                        <form method="post" action="/transactions/import" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label class="form-label">Выберите счет</label>
                                 <select name="accountId" class="form-select" required>
@@ -30,16 +30,8 @@
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label">Файл выписки (CSV, Excel)</label>
-                                <input type="file" name="file" class="form-control" accept=".csv,.xls,.xlsx" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Формат файла</label>
-                                <select name="format" class="form-select">
-                                    <option value="csv">CSV (запятые)</option>
-                                    <option value="excel">Excel</option>
-                                </select>
+                                <label class="form-label">Файл выписки (CSV)</label>
+                                <input type="file" name="file" class="form-control" accept=".csv" required>
                             </div>
 
                             <button type="submit" class="btn btn-primary">
@@ -55,9 +47,13 @@
                     </div>
                     <div class="card-body">
                             <pre class="bg-light p-3">date,description,amount
-                                                      2024-01-01,Продукты,125.50
-                                                      2024-01-02,АЗС,75.20
-                            </pre>
+2024-01-01,Продукты,125.50
+2024-01-02,АЗС,75.20
+2024-01-03,Зарплата,-2000.00</pre>
+                        <p class="text-muted small mt-2">
+                            * Отрицательные суммы считаются доходами<br>
+                            * Положительные суммы считаются расходами
+                        </p>
                     </div>
                 </div>
             </div>

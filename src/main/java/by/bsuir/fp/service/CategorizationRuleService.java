@@ -145,11 +145,19 @@ public class CategorizationRuleService {
         ruleRepository.save(rule);
     }
 
+    @Transactional(readOnly = true)
+    public long countActiveRules(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        return ruleRepository.countByUserAndIsActiveTrue(user);
+    }
+
     private RuleDto mapToDto(CategorizationRule rule) {
         return RuleDto.builder()
                 .id(rule.getId())
                 .categoryId(rule.getCategory().getId())
                 .categoryName(rule.getCategory().getName())
+                .categoryColor(rule.getCategory().getColor())
                 .field(rule.getField())
                 .operator(rule.getOperator())
                 .value(rule.getValue())

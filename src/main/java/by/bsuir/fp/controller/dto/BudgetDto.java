@@ -3,7 +3,6 @@ package by.bsuir.fp.controller.dto;
 import by.bsuir.fp.model.enums.BudgetStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import lombok.Builder;
 import lombok.Data;
 
@@ -33,6 +32,7 @@ public class BudgetDto {
 
     private List<BudgetLimitDto> limits;
     private BigDecimal totalSpent;
+    private BigDecimal totalLimit;
     private BigDecimal remainingBudget;
     private Integer progressPercentage;
 }

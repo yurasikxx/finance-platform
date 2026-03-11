@@ -67,11 +67,8 @@
                     </thead>
                     <tbody>
                     <tr th:each="tx : ${transactions}">
-                        <td th:text="${tx.transactionDate}">2024-01-01</td>
-                        <td>
-                            <span th:if="${tx.type == 'INCOME'}" class="badge bg-success">Доход</span>
-                            <span th:if="${tx.type == 'EXPENSE'}" class="badge bg-danger">Расход</span>
-                        </td>
+                        <td th:text="${tx.transactionDate}">2026-01-01</td>
+                        <td th:text="${tx.type.description}">Расход</td>
                         <td th:text="${tx.categoryName}">Продукты</td>
                         <td th:text="${tx.accountName}">Карта</td>
                         <td th:text="${tx.description}">Описание</td>
@@ -95,15 +92,19 @@
 
             <nav aria-label="Page navigation">
                 <ul class="pagination justify-content-center">
-                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
-                        <a class="page-link" th:href="@{/transactions(page=${currentPage - 1})}">Назад</a>
+                    <li class="page-item" th:classappend="${!hasPrevious} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/transactions(page=${currentPage - 1}, accountId=${selectedAccountId}, categoryId=${selectedCategoryId}, type=${selectedType})}">Назад</a>
                     </li>
                     <li th:each="i : ${#numbers.sequence(0, totalPages-1)}" class="page-item"
                         th:classappend="${i == currentPage} ? 'active'">
-                        <a class="page-link" th:href="@{/transactions(page=${i})}" th:text="${i+1}">1</a>
+                        <a class="page-link"
+                           th:href="@{/transactions(page=${i}, accountId=${selectedAccountId}, categoryId=${selectedCategoryId}, type=${selectedType})}"
+                           th:text="${i+1}">1</a>
                     </li>
-                    <li class="page-item" th:classappend="${currentPage >= totalPages-1} ? 'disabled'">
-                        <a class="page-link" th:href="@{/transactions(page=${currentPage + 1})}">Вперед</a>
+                    <li class="page-item" th:classappend="${!hasNext} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/transactions(page=${currentPage + 1}, accountId=${selectedAccountId}, categoryId=${selectedCategoryId}, type=${selectedType})}">Вперед</a>
                     </li>
                 </ul>
             </nav>

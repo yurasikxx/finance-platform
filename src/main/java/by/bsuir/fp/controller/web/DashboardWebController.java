@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -64,9 +65,27 @@ public class DashboardWebController {
         model.addAttribute("expenseBreakdown", expenseBreakdown);
         model.addAttribute("expenseLabels", expenseBreakdown.stream().map(CategoryBreakdownDto::getCategoryName).toList());
         model.addAttribute("expenseData", expenseBreakdown.stream().map(CategoryBreakdownDto::getAmount).toList());
-        model.addAttribute("dailyExpenses", stats);
-        model.addAttribute("currentUri", request.getRequestURI());
         model.addAttribute("currentDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
+        model.addAttribute("currentUri", request.getRequestURI());
+
+        Map<LocalDate, BigDecimal> dailyExpenses = transactionService.getDailyExpenses(userId, startOfMonth, now);
+        Map<LocalDate, BigDecimal> dailyIncomes = transactionService.getDailyIncomes(userId, startOfMonth, now);
+
+        List<String> dateLabels = new ArrayList<>();
+        List<BigDecimal> expenseValues = new ArrayList<>();
+        List<BigDecimal> incomeValues = new ArrayList<>();
+
+        LocalDate date = startOfMonth;
+        while (!date.isAfter(now)) {
+            dateLabels.add(date.format(DateTimeFormatter.ofPattern("dd.MM")));
+            expenseValues.add(dailyExpenses.getOrDefault(date, BigDecimal.ZERO));
+            incomeValues.add(dailyIncomes.getOrDefault(date, BigDecimal.ZERO));
+            date = date.plusDays(1);
+        }
+
+        model.addAttribute("dateLabels", dateLabels);
+        model.addAttribute("expenseValues", expenseValues);
+        model.addAttribute("incomeValues", incomeValues);
 
         return "dashboard";
     }

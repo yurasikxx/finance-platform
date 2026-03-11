@@ -1,15 +1,19 @@
 package by.bsuir.fp.controller.rest;
 
+import by.bsuir.fp.controller.dto.ImportResult;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
+import by.bsuir.fp.service.ImportService;
 import by.bsuir.fp.service.TransactionService;
 import by.bsuir.fp.util.SecurityUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -22,6 +26,7 @@ import java.util.Map;
 public class TransactionRestController {
 
     private final TransactionService transactionService;
+    private final ImportService importService;
 
     @GetMapping
     public ResponseEntity<Page<TransactionDto>> getTransactions(TransactionFilterDto filter) {
@@ -76,5 +81,16 @@ public class TransactionRestController {
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate toDate) {
         Long userId = SecurityUtils.getCurrentUserId();
         return ResponseEntity.ok(transactionService.getDailyStats(userId, fromDate, toDate));
+    }
+
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImportResult> importTransactions(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("accountId") Long accountId) {
+
+        Long userId = SecurityUtils.getCurrentUserId();
+        ImportResult result = importService.importFromCsv(userId, accountId, file);
+
+        return ResponseEntity.ok(result);
     }
 }

@@ -60,6 +60,10 @@ public class BudgetService {
 
         if (createDto.getCategoryLimits() != null) {
             for (Map.Entry<Long, BigDecimal> entry : createDto.getCategoryLimits().entrySet()) {
+                if (entry.getValue() == null || entry.getValue().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+
                 Category category = categoryRepository.findById(entry.getKey())
                         .orElseThrow(() -> new CategoryNotFoundException("Категория не найдена"));
 
@@ -241,6 +245,7 @@ public class BudgetService {
                 .description(budget.getDescription())
                 .limits(limitDtos)
                 .totalSpent(totalSpent)
+                .totalLimit(totalLimit)
                 .remainingBudget(totalLimit.subtract(totalSpent))
                 .progressPercentage(progressPercentage)
                 .build();
