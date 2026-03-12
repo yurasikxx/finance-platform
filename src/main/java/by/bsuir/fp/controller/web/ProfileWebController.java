@@ -7,31 +7,37 @@ import by.bsuir.fp.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+@Slf4j
 @Controller
 @RequestMapping("/profile")
 @RequiredArgsConstructor
 public class ProfileWebController {
 
+    private final SecurityService securityService;
     private final UserService userService;
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategorizationRuleService ruleService;
-    private final SecurityService securityService;
 
     @GetMapping
     public String profile(Model model, HttpServletRequest request) {
         Long userId = securityService.getCurrentUserId();
         UserResponseDto user = userService.getUserById(userId);
 
-        model.addAttribute("totalTransactions", transactionService.countUserTransactions(userId));
-        model.addAttribute("totalAccounts", accountService.countUserAccounts(userId));
-        model.addAttribute("activeRules", ruleService.countActiveRules(userId));
+        long totalTransactions = transactionService.countUserTransactions(userId);
+        long totalAccounts = accountService.countUserAccounts(userId);
+        long activeRules = ruleService.countActiveRules(userId);
+
         model.addAttribute("user", user);
+        model.addAttribute("totalTransactions", totalTransactions);
+        model.addAttribute("totalAccounts", totalAccounts);
+        model.addAttribute("activeRules", activeRules);
         model.addAttribute("currentUri", request.getRequestURI());
 
         return "profile/index";
@@ -93,6 +99,7 @@ public class ProfileWebController {
             redirectAttributes.addFlashAttribute("success", "Профиль успешно обновлен");
 
         } catch (Exception e) {
+            log.error("Error updating profile", e);
             redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
         }
 
@@ -111,6 +118,7 @@ public class ProfileWebController {
             redirectAttributes.addFlashAttribute("success", "Аккаунт успешно удален");
 
         } catch (Exception e) {
+            log.error("Error deleting account", e);
             redirectAttributes.addFlashAttribute("error", "Ошибка удаления аккаунта: " + e.getMessage());
             return "redirect:/profile";
         }

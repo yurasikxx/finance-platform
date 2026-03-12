@@ -72,7 +72,13 @@
                         <td th:text="${tx.categoryName}">Продукты</td>
                         <td th:text="${tx.accountName}">Карта</td>
                         <td th:text="${tx.description}">Описание</td>
-                        <td class="text-end" th:text="${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')}">100.00</td>
+                        <td class="text-end">
+                            <span th:text="${#numbers.formatDecimal(tx.amount, 1, 2, 'COMMA')} + ' ' + ${tx.accountCurrency}"></span>
+                            <small class="text-muted"
+                                   th:if="${tx.accountCurrency != null and tx.accountCurrency != baseCurrency and tx.amountInBaseCurrency != null}"
+                                   th:text="' (' + ${#numbers.formatDecimal(tx.amountInBaseCurrency, 1, 2, 'COMMA')} + ' ' + ${baseCurrency} + ')'">
+                            </small>
+                        </td>
                         <td>
                             <a th:href="@{/transactions/{id}/edit(id=${tx.id})}" class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>

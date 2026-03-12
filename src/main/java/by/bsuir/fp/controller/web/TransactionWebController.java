@@ -1,20 +1,19 @@
 package by.bsuir.fp.controller.web;
 
-import by.bsuir.fp.controller.dto.ImportResult;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
+import by.bsuir.fp.controller.dto.UserResponseDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Controller
@@ -22,11 +21,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TransactionWebController {
 
+    private final SecurityService securityService;
+    private final UserService userService;
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategoryService categoryService;
-    private final ImportService importService;
-    private final SecurityService securityService;
 
     @GetMapping
     public String list(
@@ -34,17 +33,15 @@ public class TransactionWebController {
             @RequestParam(required = false) Long accountId,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) TransactionType type,
-            Model model,
-            HttpServletRequest request) {
+            Model model, HttpServletRequest request) {
 
         Long userId = securityService.getCurrentUserId();
+        UserResponseDto user = userService.getUserById(userId);
 
-        if (page < 0) {
-            page = 0;
-        }
+        int currentPage = Math.max(0, page);
 
         TransactionFilterDto filter = new TransactionFilterDto();
-        filter.setPage(page);
+        filter.setPage(currentPage);
         filter.setSize(20);
         filter.setAccountId(accountId);
         filter.setCategoryId(categoryId);
@@ -53,15 +50,15 @@ public class TransactionWebController {
         Page<TransactionDto> transactionsPage = transactionService.getTransactions(userId, filter);
 
         model.addAttribute("transactions", transactionsPage.getContent());
-        model.addAttribute("currentPage", page);
+        model.addAttribute("currentPage", currentPage);
         model.addAttribute("totalPages", transactionsPage.getTotalPages());
         model.addAttribute("totalElements", transactionsPage.getTotalElements());
-
         model.addAttribute("hasPrevious", transactionsPage.hasPrevious());
         model.addAttribute("hasNext", transactionsPage.hasNext());
-
+        model.addAttribute("baseCurrency", user.getDefaultCurrency());
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
-        model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
+        model.addAttribute("expenseCategories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
+        model.addAttribute("incomeCategories", categoryService.getUserCategories(userId, TransactionType.INCOME));
         model.addAttribute("selectedAccountId", accountId);
         model.addAttribute("selectedCategoryId", categoryId);
         model.addAttribute("selectedType", type);
@@ -85,7 +82,8 @@ public class TransactionWebController {
     }
 
     @PostMapping
-    public String create(@ModelAttribute TransactionDto transactionDto, RedirectAttributes redirectAttributes) {
+    public String create(@Valid @ModelAttribute TransactionDto transactionDto,
+                         RedirectAttributes redirectAttributes) {
         try {
             Long userId = securityService.getCurrentUserId();
             transactionService.createTransaction(userId, transactionDto);
@@ -100,35 +98,33 @@ public class TransactionWebController {
     public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
         Long userId = securityService.getCurrentUserId();
 
-        TransactionDto transaction = transactionService.getTransactionById(userId, id);
+        try {
+            TransactionDto transaction = transactionService.getTransactionById(userId, id);
 
-        if (transaction.getTransactionDate() != null) {
-            model.addAttribute("transactionDateStr",
-                    transaction.getTransactionDate().format(DateTimeFormatter.ISO_LOCAL_DATE));
+            model.addAttribute("transaction", transaction);
+            model.addAttribute("accounts", accountService.getUserAccounts(userId));
+            model.addAttribute("expenseCategories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
+            model.addAttribute("incomeCategories", categoryService.getUserCategories(userId, TransactionType.INCOME));
+            model.addAttribute("isEdit", true);
+            model.addAttribute("currentUri", request.getRequestURI());
+
+            return "transactions/form";
+        } catch (Exception e) {
+            return "redirect:/transactions";
         }
-
-        model.addAttribute("transaction", transaction);
-        model.addAttribute("accounts", accountService.getUserAccounts(userId));
-        model.addAttribute("expenseCategories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
-        model.addAttribute("incomeCategories", categoryService.getUserCategories(userId, TransactionType.INCOME));
-        model.addAttribute("isEdit", true);
-        model.addAttribute("currentUri", request.getRequestURI());
-
-        return "transactions/form";
     }
 
     @PostMapping("/{id}/edit")
     public String update(@PathVariable Long id,
-                         @ModelAttribute TransactionDto transactionDto,
+                         @Valid @ModelAttribute TransactionDto transactionDto,
                          RedirectAttributes redirectAttributes) {
         try {
             Long userId = securityService.getCurrentUserId();
             transactionService.updateTransaction(userId, id, transactionDto);
-            redirectAttributes.addFlashAttribute("success", "Транзакция обновлена");
+            redirectAttributes.addFlashAttribute("success", "Транзакция успешно обновлена");
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Ошибка обновления: " + e.getMessage());
+            redirectAttributes.addFlashAttribute("error", "Ошибка обновления транзакции: " + e.getMessage());
         }
-
         return "redirect:/transactions";
     }
 
@@ -144,50 +140,15 @@ public class TransactionWebController {
         return "redirect:/transactions";
     }
 
-    @GetMapping("/import")
-    public String importForm(Model model, HttpServletRequest request) {
-        Long userId = securityService.getCurrentUserId();
-
-        model.addAttribute("accounts", accountService.getUserAccounts(userId));
-        model.addAttribute("currentUri", request.getRequestURI());
-
-        return "transactions/import";
-    }
-
-    @PostMapping("/import")
-    public String importTransactions(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("accountId") Long accountId,
-            RedirectAttributes redirectAttributes) {
-
-        try {
-            Long userId = securityService.getCurrentUserId();
-            ImportResult result = importService.importFromCsv(userId, accountId, file);
-
-            if (result.getErrorCount() == 0) {
-                redirectAttributes.addFlashAttribute("success",
-                        "Успешно импортировано " + result.getSuccessCount() + " транзакций");
-            } else {
-                redirectAttributes.addFlashAttribute("warning",
-                        "Импортировано " + result.getSuccessCount() + " из " + result.getTotalCount() +
-                                ". Ошибок: " + result.getErrorCount());
-
-                redirectAttributes.addFlashAttribute("importErrors", result.getErrors());
-            }
-
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "Ошибка импорта: " + e.getMessage());
-        }
-
-        return "redirect:/transactions";
-    }
-
     @GetMapping("/uncategorized")
     public String uncategorized(Model model, HttpServletRequest request) {
         Long userId = securityService.getCurrentUserId();
+        UserResponseDto user = userService.getUserById(userId);
 
         List<TransactionDto> uncategorized = transactionService.getUncategorizedTransactions(userId);
+
         model.addAttribute("transactions", uncategorized);
+        model.addAttribute("baseCurrency", user.getDefaultCurrency());
         model.addAttribute("categories", categoryService.getUserCategories(userId, TransactionType.EXPENSE));
         model.addAttribute("currentUri", request.getRequestURI());
 
@@ -195,7 +156,9 @@ public class TransactionWebController {
     }
 
     @PostMapping("/{id}/categorize")
-    public String categorize(@PathVariable Long id, @RequestParam Long categoryId, RedirectAttributes redirectAttributes) {
+    public String categorize(@PathVariable Long id,
+                             @RequestParam Long categoryId,
+                             RedirectAttributes redirectAttributes) {
         try {
             Long userId = securityService.getCurrentUserId();
             transactionService.categorizeTransaction(userId, id, categoryId);

@@ -1,9 +1,14 @@
 package by.bsuir.fp.controller.web;
 
 import by.bsuir.fp.controller.dto.AccountDto;
+import by.bsuir.fp.controller.dto.UserResponseDto;
+import by.bsuir.fp.model.enums.AccountType;
+import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.service.AccountService;
 import by.bsuir.fp.service.SecurityService;
+import by.bsuir.fp.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,31 +23,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountWebController {
 
-    private final AccountService accountService;
     private final SecurityService securityService;
+    private final UserService userService;
+    private final AccountService accountService;
 
     @GetMapping
     public String list(Model model, HttpServletRequest request) {
         Long userId = securityService.getCurrentUserId();
+        UserResponseDto user = userService.getUserById(userId);
+
         List<AccountDto> accounts = accountService.getUserAccounts(userId);
-        BigDecimal totalBalance = accountService.getTotalBalance(userId);
+        BigDecimal totalBalance = accountService.getTotalBalanceInBaseCurrency(userId, user.getDefaultCurrency());
 
         model.addAttribute("accounts", accounts);
         model.addAttribute("totalBalance", totalBalance);
+        model.addAttribute("baseCurrency", user.getDefaultCurrency());
+        model.addAttribute("accountTypes", AccountType.values());
+        model.addAttribute("currencies", CurrencyCode.values());
         model.addAttribute("currentUri", request.getRequestURI());
+
         return "accounts/list";
     }
 
     @GetMapping("/add")
     public String addForm(Model model, HttpServletRequest request) {
         model.addAttribute("account", new AccountDto());
+        model.addAttribute("accountTypes", AccountType.values());
+        model.addAttribute("currencies", CurrencyCode.values());
         model.addAttribute("isEdit", false);
         model.addAttribute("currentUri", request.getRequestURI());
+
         return "accounts/form";
     }
 
     @PostMapping
-    public String create(@ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
+    public String create(@Valid @ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
         try {
             Long userId = securityService.getCurrentUserId();
             accountService.createAccount(userId, accountDto);
@@ -60,8 +75,11 @@ public class AccountWebController {
             AccountDto account = accountService.getAccountById(userId, id);
 
             model.addAttribute("account", account);
+            model.addAttribute("accountTypes", AccountType.values());
+            model.addAttribute("currencies", CurrencyCode.values());
             model.addAttribute("isEdit", true);
             model.addAttribute("currentUri", request.getRequestURI());
+
             return "accounts/form";
         } catch (Exception e) {
             return "redirect:/accounts";
@@ -69,7 +87,9 @@ public class AccountWebController {
     }
 
     @PostMapping("/{id}/edit")
-    public String update(@PathVariable Long id, @ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
+    public String update(@PathVariable Long id,
+                         @Valid @ModelAttribute AccountDto accountDto,
+                         RedirectAttributes redirectAttributes) {
         try {
             Long userId = securityService.getCurrentUserId();
             accountService.updateAccount(userId, id, accountDto);

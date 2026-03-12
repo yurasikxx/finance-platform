@@ -3,12 +3,14 @@ package by.bsuir.fp.service;
 import by.bsuir.fp.controller.dto.CurrencyRateDto;
 import by.bsuir.fp.controller.dto.NbrbRateDto;
 import by.bsuir.fp.model.CurrencyRate;
+import by.bsuir.fp.model.Transaction;
 import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.repository.CurrencyRateRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
 
@@ -30,10 +32,10 @@ public class CurrencyService {
     private final CurrencyRateRepository currencyRateRepository;
     private final RestClient nbrbRestClient;
 
-    private static final Map<CurrencyCode, Integer> NBRB_CURRENCY_IDS = Map.of(
-            CurrencyCode.USD, 145,
-            CurrencyCode.EUR, 19,
-            CurrencyCode.RUB, 17
+    private static final Map<CurrencyCode, String> CURRENCY_CODES = Map.of(
+            CurrencyCode.USD, "USD",
+            CurrencyCode.EUR, "EUR",
+            CurrencyCode.RUB, "RUB"
     );
 
     @Transactional(readOnly = true)
@@ -42,7 +44,7 @@ public class CurrencyService {
 
         return Arrays.stream(CurrencyCode.values())
                 .filter(currency -> currency != CurrencyCode.BYN)
-                .map(currency -> getRateForDate(currency, today))
+                .map(currency -> getRateFromDatabase(currency, today))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
@@ -57,28 +59,64 @@ public class CurrencyService {
                     .build();
         }
 
-        return currencyRateRepository.findByCurrencyAndRateDate(currency, date)
-                .map(this::mapToDto)
-                .orElseGet(() -> fetchAndSaveRate(currency, date));
+        List<CurrencyRate> rates = currencyRateRepository.findByCurrencyAndRateDate(currency, date);
+        if (!rates.isEmpty()) {
+            rates.sort((a, b) -> b.getId().compareTo(a.getId()));
+            return mapToDto(rates.getFirst());
+        }
+
+        CurrencyRate latest = currencyRateRepository.findTopByCurrencyOrderByRateDateDesc(currency)
+                .orElse(null);
+        if (latest != null) {
+            log.warn("Using latest rate for {} from {} for date {}",
+                    currency, latest.getRateDate(), date);
+            return mapToDto(latest);
+        }
+
+        return null;
     }
 
-    @Transactional
-    public CurrencyRateDto fetchAndSaveRate(CurrencyCode currency, LocalDate date) {
+    @Transactional(readOnly = true)
+    public CurrencyRateDto getRateFromDatabase(CurrencyCode currency, LocalDate date) {
+        List<CurrencyRate> rates = currencyRateRepository.findByCurrencyAndRateDate(currency, date);
+
+        if (!rates.isEmpty()) {
+            if (rates.size() > 1) {
+                log.warn("Found {} rates for {} on {}, using the most recent",
+                        rates.size(), currency, date);
+                rates.sort((a, b) -> b.getId().compareTo(a.getId()));
+            }
+            return mapToDto(rates.getFirst());
+        }
+
+        CurrencyRate latest = currencyRateRepository.findTopByCurrencyOrderByRateDateDesc(currency)
+                .orElse(null);
+        if (latest != null) {
+            log.warn("Using latest rate for {} from {} for date {}",
+                    currency, latest.getRateDate(), date);
+            return mapToDto(latest);
+        }
+
+        return null;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void fetchAndSaveRate(CurrencyCode currency, LocalDate date) {
         try {
-            Integer currencyId = NBRB_CURRENCY_IDS.get(currency);
-            if (currencyId == null) {
-                log.warn("No NBRB currency ID for: {}", currency);
-                return null;
+            String currencyCode = CURRENCY_CODES.get(currency);
+            if (currencyCode == null) {
+                log.warn("No currency code for: {}", currency);
+                return;
             }
 
             String dateStr = date.format(DateTimeFormatter.ISO_LOCAL_DATE);
+            String url = String.format("/exrates/rates/%s?parammode=2&ondate=%s",
+                    currencyCode, dateStr);
+
+            log.info("Fetching rate from NBRB API: {}", url);
 
             NbrbRateDto rateDto = nbrbRestClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/exrates/rates/{currencyId}")
-                            .queryParam("ondate", dateStr)
-                            .queryParam("periodicity", 0)
-                            .build(currencyId))
+                    .uri(url)
                     .retrieve()
                     .body(NbrbRateDto.class);
 
@@ -89,50 +127,80 @@ public class CurrencyService {
                     rate = rate.divide(BigDecimal.valueOf(rateDto.getCurScale()), 4, RoundingMode.HALF_UP);
                 }
 
+                List<CurrencyRate> oldRates = currencyRateRepository.findByCurrencyAndRateDate(currency, date);
+                if (!oldRates.isEmpty()) {
+                    log.info("Deleting {} old rate(s) for {} on {}", oldRates.size(), currency, date);
+                    currencyRateRepository.deleteAll(oldRates);
+                    currencyRateRepository.flush();
+                }
+
                 CurrencyRate currencyRate = CurrencyRate.builder()
                         .currency(currency)
                         .rateToByn(rate)
                         .rateDate(date)
                         .build();
+                currencyRateRepository.save(currencyRate);
 
-                CurrencyRate saved = currencyRateRepository.save(currencyRate);
-                log.info("Saved rate for {} on {}: {}", currency, date, rate);
+                log.info("Saved new rate for {} on {}: {}", currency, date, rate);
 
-                return mapToDto(saved);
+                CurrencyRateDto.builder()
+                        .currency(currency)
+                        .rateToByn(rate)
+                        .rateDate(date)
+                        .build();
             }
         } catch (Exception e) {
-            log.error("Failed to fetch rate for {} on {}: {}", currency, date, e.getMessage());
+            log.error("Failed to fetch/save rate for {} on {}: {}", currency, date, e.getMessage());
         }
 
-        return null;
     }
 
-    @Scheduled(cron = "0 0 12 * * *") // каждый день в 12:00
+    @Scheduled(cron = "0 0 12 * * *")
     @Transactional
     public void updateDailyRates() {
-        log.info("Updating daily currency rates");
+        log.info("Starting daily currency rates update");
         LocalDate today = LocalDate.now();
 
-        for (CurrencyCode currency : NBRB_CURRENCY_IDS.keySet()) {
+        for (CurrencyCode currency : CURRENCY_CODES.keySet()) {
             fetchAndSaveRate(currency, today);
         }
     }
 
     @Transactional(readOnly = true)
     public BigDecimal convert(BigDecimal amount, CurrencyCode from, CurrencyCode to, LocalDate date) {
-        if (from == to) {
-            return amount;
-        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        if (from == to) return amount;
+
+        log.debug("Converting {} {} to {} on {}", amount, from, to, date);
 
         CurrencyRateDto fromRate = getRateForDate(from, date);
         CurrencyRateDto toRate = getRateForDate(to, date);
 
-        if (fromRate == null || toRate == null) {
-            throw new RuntimeException("Unable to get exchange rates for conversion");
+        if (fromRate == null || toRate == null ||
+                fromRate.getRateToByn() == null || toRate.getRateToByn() == null) {
+            log.error("Missing rates for conversion {} -> {} on {}", from, to, date);
+            return amount;
         }
 
         BigDecimal amountInByn = amount.multiply(fromRate.getRateToByn());
-        return amountInByn.divide(toRate.getRateToByn(), 2, RoundingMode.HALF_UP);
+        BigDecimal result = amountInByn.divide(toRate.getRateToByn(), 2, RoundingMode.HALF_UP);
+
+        log.debug("{} {} -> {} BYN -> {} {}", amount, from, amountInByn, result, to);
+
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public BigDecimal convertTransaction(Transaction transaction, CurrencyCode targetCurrency) {
+        if (transaction == null) return BigDecimal.ZERO;
+        if (transaction.getAccount() == null) return transaction.getAmount();
+
+        return convert(
+                transaction.getAmount(),
+                transaction.getAccount().getCurrency(),
+                targetCurrency,
+                transaction.getTransactionDate()
+        );
     }
 
     private CurrencyRateDto mapToDto(CurrencyRate rate) {

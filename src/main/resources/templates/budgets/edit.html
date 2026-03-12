@@ -39,7 +39,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Плановый доход</label>
+                            <label class="form-label">Плановый доход (<span
+                                    th:text="${baseCurrency}">BYN</span>)</label>
                             <input type="number" step="0.01" th:field="*{plannedIncome}" class="form-control">
                         </div>
 
@@ -52,7 +53,7 @@
 
                 <div class="card mb-4">
                     <div class="card-header">
-                        <i class="bi bi-tags"></i> Лимиты по категориям
+                        <i class="bi bi-tags"></i> Лимиты по категориям (<span th:text="${baseCurrency}">BYN</span>)
                     </div>
                     <div class="card-body">
                         <div th:each="cat : ${categories}" class="row mb-3 align-items-center">
@@ -70,7 +71,7 @@
                                        placeholder="Лимит">
                             </div>
                             <div class="col-md-2">
-                                <span class="text-muted">BYN</span>
+                                <span class="text-muted" th:text="${baseCurrency}">BYN</span>
                             </div>
                         </div>
                     </div>

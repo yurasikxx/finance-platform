@@ -12,7 +12,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
     Boolean existsByEmail(String email);
-
-    // Поиск по GoogleID (для OAuth2)
-    Optional<User> findByGoogleId(String googleId);
 }

@@ -3,11 +3,16 @@ package by.bsuir.fp.controller.web;
 import by.bsuir.fp.controller.dto.AnalyticsDashboardDto;
 import by.bsuir.fp.controller.dto.AnalyticsRequestDto;
 import by.bsuir.fp.controller.dto.CategoryBreakdownDto;
+import by.bsuir.fp.controller.dto.UserResponseDto;
+import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.AnalyticsService;
 import by.bsuir.fp.service.SecurityService;
 import by.bsuir.fp.service.TransactionService;
+import by.bsuir.fp.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,80 +28,84 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Controller
 @RequestMapping("/analytics")
 @RequiredArgsConstructor
 public class AnalyticsWebController {
 
+    private final SecurityService securityService;
+    private final UserService userService;
     private final AnalyticsService analyticsService;
     private final TransactionService transactionService;
-    private final SecurityService securityService;
 
     @GetMapping
     public String dashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
-            Model model) {
+            Model model,
+            HttpServletRequest request) {
 
         Long userId = securityService.getCurrentUserId();
+        UserResponseDto user = userService.getUserById(userId);
+        CurrencyCode baseCurrency = user.getDefaultCurrency();
 
         LocalDate start = fromDate != null ? fromDate : YearMonth.now().atDay(1);
         LocalDate end = toDate != null ? toDate : LocalDate.now();
 
-        AnalyticsRequestDto request = new AnalyticsRequestDto();
-        request.setFromDate(start);
-        request.setToDate(end);
+        AnalyticsRequestDto analyticsRequest = new AnalyticsRequestDto();
+        analyticsRequest.setFromDate(start);
+        analyticsRequest.setToDate(end);
 
-        AnalyticsDashboardDto dashboard = analyticsService.getDashboard(userId, request);
+        AnalyticsDashboardDto dashboard = analyticsService.getDashboard(userId, analyticsRequest);
 
-        List<String> expenseLabels = dashboard.getExpenseBreakdown().stream()
-                .map(CategoryBreakdownDto::getCategoryName).toList();
-        List<BigDecimal> expenseData = dashboard.getExpenseBreakdown().stream()
-                .map(CategoryBreakdownDto::getAmount).toList();
-
-        Map<LocalDate, BigDecimal> dailyExpenses = transactionService.getDailyExpenses(userId, start, end);
-        Map<LocalDate, BigDecimal> dailyIncomes = transactionService.getDailyIncomes(userId, start, end);
+        Map<LocalDate, BigDecimal> dailyExpenses = transactionService.getDailyExpensesInBaseCurrency(
+                userId, start, end, baseCurrency);
+        Map<LocalDate, BigDecimal> dailyIncomes = transactionService.getDailyIncomesInBaseCurrency(
+                userId, start, end, baseCurrency);
 
         List<String> dateLabels = new ArrayList<>();
         List<BigDecimal> expenseValues = new ArrayList<>();
         List<BigDecimal> incomeValues = new ArrayList<>();
 
-        LocalDate date = start;
-        while (!date.isAfter(end)) {
-            dateLabels.add(date.format(DateTimeFormatter.ofPattern("dd.MM")));
-            expenseValues.add(dailyExpenses.getOrDefault(date, BigDecimal.ZERO));
-            incomeValues.add(dailyIncomes.getOrDefault(date, BigDecimal.ZERO));
-            date = date.plusDays(1);
+        LocalDate current = start;
+        while (!current.isAfter(end)) {
+            dateLabels.add(current.format(DateTimeFormatter.ofPattern("dd.MM")));
+            expenseValues.add(dailyExpenses.getOrDefault(current, BigDecimal.ZERO));
+            incomeValues.add(dailyIncomes.getOrDefault(current, BigDecimal.ZERO));
+            current = current.plusDays(1);
         }
 
-        var expenseBreakdown = analyticsService.getCategoryBreakdown(
-                userId, TransactionType.EXPENSE, start, end);
+        List<CategoryBreakdownDto> expenseBreakdown = analyticsService.getCategoryBreakdownInBaseCurrency(
+                userId, TransactionType.EXPENSE, start, end, baseCurrency);
 
-        model.addAttribute("expenseBreakdown", expenseBreakdown);
-
+        model.addAttribute("baseCurrency", baseCurrency);
         model.addAttribute("dashboard", dashboard);
-
-        // Форматируем даты для input type="date" (нужен формат yyyy-MM-dd)
-        model.addAttribute("fromDateInput", start.format(DateTimeFormatter.ISO_LOCAL_DATE));
-        model.addAttribute("toDateInput", end.format(DateTimeFormatter.ISO_LOCAL_DATE));
-
-        // Для отображения в таблицах
+        model.addAttribute("fromDate", start.format(DateTimeFormatter.ISO_DATE));
+        model.addAttribute("toDate", end.format(DateTimeFormatter.ISO_DATE));
         model.addAttribute("fromDateDisplay", start.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
         model.addAttribute("toDateDisplay", end.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")));
 
-        model.addAttribute("expenseLabels", expenseLabels);
-        model.addAttribute("expenseData", expenseData);
+        model.addAttribute("expenseLabels", dashboard.getExpenseBreakdown().stream()
+                .map(CategoryBreakdownDto::getCategoryName).toList());
+        model.addAttribute("expenseData", dashboard.getExpenseBreakdown().stream()
+                .map(CategoryBreakdownDto::getAmount).toList());
 
         model.addAttribute("dateLabels", dateLabels);
         model.addAttribute("expenseValues", expenseValues);
         model.addAttribute("incomeValues", incomeValues);
 
+        model.addAttribute("expenseBreakdown", expenseBreakdown);
+        model.addAttribute("currentUri", request.getRequestURI());
+
         return "analytics/dashboard";
     }
 
     @GetMapping("/reports")
-    public String reports(Model model) {
+    public String reports(Model model, HttpServletRequest request) {
         Long userId = securityService.getCurrentUserId();
+        UserResponseDto user = userService.getUserById(userId);
+        CurrencyCode baseCurrency = user.getDefaultCurrency();
 
         LocalDate now = LocalDate.now();
         LocalDate startOfMonth = YearMonth.now().atDay(1);
@@ -112,12 +121,14 @@ public class AnalyticsWebController {
         yearRequest.setToDate(now);
         AnalyticsDashboardDto yearStats = analyticsService.getDashboard(userId, yearRequest);
 
-        var expenseBreakdown = analyticsService.getCategoryBreakdown(
-                userId, TransactionType.EXPENSE, startOfMonth, now);
+        List<CategoryBreakdownDto> expenseBreakdown = analyticsService.getCategoryBreakdownInBaseCurrency(
+                userId, TransactionType.EXPENSE, startOfMonth, now, baseCurrency);
 
+        model.addAttribute("baseCurrency", baseCurrency);
         model.addAttribute("monthStats", monthStats);
         model.addAttribute("yearStats", yearStats);
         model.addAttribute("expenseBreakdown", expenseBreakdown);
+        model.addAttribute("currentUri", request.getRequestURI());
 
         return "analytics/reports";
     }

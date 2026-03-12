@@ -47,8 +47,8 @@
                                 </div>
                                 <div class="col-6">
                                     <small class="text-muted">Плановый доход</small>
-                                    <div th:text="${#numbers.formatDecimal(budget.plannedIncome, 1, 2, 'COMMA')} + ' BYN'">
-                                        1000.00 BYN
+                                    <div th:text="${#numbers.formatDecimal(budget.plannedIncome, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                        1000,00 BYN
                                     </div>
                                 </div>
                             </div>
@@ -67,14 +67,14 @@
                             <div class="d-flex justify-content-between">
                                 <div>
                                     <small class="text-muted">Потрачено</small>
-                                    <div th:text="${#numbers.formatDecimal(budget.totalSpent, 1, 2, 'COMMA')} + ' BYN'">
-                                        500.00 BYN
+                                    <div th:text="${#numbers.formatDecimal(budget.totalSpent, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                        500,00 BYN
                                     </div>
                                 </div>
                                 <div>
                                     <small class="text-muted">Осталось</small>
-                                    <div th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 2, 'COMMA')} + ' BYN'">
-                                        500.00 BYN
+                                    <div th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                        500,00 BYN
                                     </div>
                                 </div>
                             </div>

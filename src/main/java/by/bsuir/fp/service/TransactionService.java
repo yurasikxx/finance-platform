@@ -2,11 +2,9 @@ package by.bsuir.fp.service;
 
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
-import by.bsuir.fp.exception.AccountNotFoundException;
-import by.bsuir.fp.exception.CategoryNotFoundException;
-import by.bsuir.fp.exception.TransactionNotFoundException;
-import by.bsuir.fp.exception.UserNotFoundException;
+import by.bsuir.fp.exception.*;
 import by.bsuir.fp.model.*;
+import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -20,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +32,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final CategoryRepository categoryRepository;
     private final CategorizationRuleRepository ruleRepository;
+    private final CurrencyService currencyService;
 
     private final DescriptionCategorizationStrategy descriptionStrategy;
     private final AmountCategorizationStrategy amountStrategy;
@@ -45,7 +46,7 @@ public class TransactionService {
                 .orElseThrow(() -> new AccountNotFoundException("Счет не найден"));
 
         if (!account.getUser().getId().equals(userId)) {
-            throw new SecurityException("Нет доступа к этому счету");
+            throw new AccountAccessDeniedException("Нет доступа к этому счету");
         }
 
         Transaction transaction = Transaction.builder()
@@ -78,32 +79,16 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public long countUserTransactions(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-        return transactionRepository.countByUser(user);
-    }
-
-    @Transactional(readOnly = true)
-    public TransactionDto getTransactionById(Long userId, Long transactionId) {
-        Transaction transaction = transactionRepository.findById(transactionId)
-                .orElseThrow(() -> new TransactionNotFoundException("Транзакция не найдена"));
-
-        if (!transaction.getUser().getId().equals(userId)) {
-            throw new SecurityException("Нет доступа к этой транзакции");
-        }
-
-        return mapToDto(transaction);
-    }
-
-    @Transactional(readOnly = true)
     public Page<TransactionDto> getTransactions(Long userId, TransactionFilterDto filter) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
 
+        int page = filter.getPage() != null ? Math.max(0, filter.getPage()) : 0;
+        int size = filter.getSize() != null ? filter.getSize() : 20;
+
         Pageable pageable = PageRequest.of(
-                filter.getPage() != null ? filter.getPage() : 0,
-                filter.getSize() != null ? filter.getSize() : 20,
+                page,
+                size,
                 Sort.by("transactionDate").descending().and(Sort.by("id").descending())
         );
 
@@ -132,13 +117,118 @@ public class TransactionService {
                 .map(this::mapToDto);
     }
 
+    @Transactional(readOnly = true)
+    public Map<String, BigDecimal> getMonthlyStatsInBaseCurrency(Long userId, CurrencyCode baseCurrency) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        LocalDate now = LocalDate.now();
+        LocalDate startOfMonth = now.withDayOfMonth(1);
+
+        List<Transaction> transactions = transactionRepository
+                .findByUserAndTransactionDateBetween(user, startOfMonth, now);
+
+        BigDecimal totalIncome = BigDecimal.ZERO;
+        BigDecimal totalExpense = BigDecimal.ZERO;
+
+        for (Transaction tx : transactions) {
+            BigDecimal amountInBase = currencyService.convertTransaction(tx, baseCurrency);
+
+            if (tx.getType() == TransactionType.INCOME) {
+                totalIncome = totalIncome.add(amountInBase);
+            } else {
+                totalExpense = totalExpense.add(amountInBase);
+            }
+        }
+
+        return Map.of(
+                "income", totalIncome,
+                "expense", totalExpense,
+                "balance", totalIncome.subtract(totalExpense)
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<LocalDate, BigDecimal> getDailyExpensesInBaseCurrency(Long userId, LocalDate fromDate, LocalDate toDate, CurrencyCode baseCurrency) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        List<Transaction> transactions = transactionRepository
+                .findByUserAndTransactionDateBetween(user, fromDate, toDate);
+
+        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
+
+        LocalDate date = fromDate;
+        while (!date.isAfter(toDate)) {
+            dailyMap.put(date, BigDecimal.ZERO);
+            date = date.plusDays(1);
+        }
+
+        for (Transaction tx : transactions) {
+            if (tx.getType() == TransactionType.EXPENSE) {
+                BigDecimal amountInBase = currencyService.convertTransaction(tx, baseCurrency);
+                dailyMap.computeIfPresent(tx.getTransactionDate(), (k, current) -> current.add(amountInBase));
+            }
+        }
+
+        return dailyMap;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<LocalDate, BigDecimal> getDailyIncomesInBaseCurrency(Long userId, LocalDate fromDate, LocalDate toDate, CurrencyCode baseCurrency) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        List<Transaction> transactions = transactionRepository
+                .findByUserAndTransactionDateBetween(user, fromDate, toDate);
+
+        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
+
+        LocalDate date = fromDate;
+        while (!date.isAfter(toDate)) {
+            dailyMap.put(date, BigDecimal.ZERO);
+            date = date.plusDays(1);
+        }
+
+        for (Transaction tx : transactions) {
+            if (tx.getType() == TransactionType.INCOME) {
+                BigDecimal amountInBase = currencyService.convertTransaction(tx, baseCurrency);
+                dailyMap.computeIfPresent(tx.getTransactionDate(), (k, current) -> current.add(amountInBase));
+            }
+        }
+
+        return dailyMap;
+    }
+
+    @Transactional(readOnly = true)
+    public TransactionDto getTransactionById(Long userId, Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new TransactionNotFoundException("Транзакция не найдена"));
+
+        if (!transaction.getUser().getId().equals(userId)) {
+            throw new TransactionAccessDeniedException("Нет доступа к этой транзакции");
+        }
+
+        return mapToDto(transaction);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TransactionDto> getUncategorizedTransactions(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+
+        return transactionRepository.findByUserAndIsCategorizedFalse(user).stream()
+                .map(this::mapToDto)
+                .toList();
+    }
+
     @Transactional
     public TransactionDto updateTransaction(Long userId, Long transactionId, TransactionDto dto) {
         Transaction transaction = transactionRepository.findById(transactionId)
                 .orElseThrow(() -> new TransactionNotFoundException("Транзакция не найдена"));
 
         if (!transaction.getUser().getId().equals(userId)) {
-            throw new SecurityException("Нет доступа к этой транзакции");
+            throw new TransactionAccessDeniedException("Нет доступа к этой транзакции");
         }
 
         BigDecimal oldAmount = transaction.getAmount();
@@ -163,7 +253,7 @@ public class TransactionService {
                     .orElseThrow(() -> new AccountNotFoundException("Счет не найден"));
 
             if (!newAccount.getUser().getId().equals(userId)) {
-                throw new SecurityException("Нет доступа к этому счету");
+                throw new AccountAccessDeniedException("Нет доступа к этому счету");
             }
 
             transaction.setAccount(newAccount);
@@ -220,27 +310,18 @@ public class TransactionService {
                 .orElseThrow(() -> new TransactionNotFoundException("Транзакция не найдена"));
 
         if (!transaction.getUser().getId().equals(userId)) {
-            throw new SecurityException("Нет доступа к этой транзакции");
+            throw new TransactionAccessDeniedException("Нет доступа к этой транзакции");
         }
 
         Account account = transaction.getAccount();
-        account.setCurrentBalance(reverseBalanceUpdate(
-                account.getCurrentBalance(),
-                transaction.getAmount(),
-                transaction.getType()));
+        if (transaction.getType() == TransactionType.INCOME) {
+            account.setCurrentBalance(account.getCurrentBalance().subtract(transaction.getAmount()));
+        } else if (transaction.getType() == TransactionType.EXPENSE) {
+            account.setCurrentBalance(account.getCurrentBalance().add(transaction.getAmount()));
+        }
         accountRepository.save(account);
 
         transactionRepository.delete(transaction);
-    }
-
-    @Transactional(readOnly = true)
-    public List<TransactionDto> getUncategorizedTransactions(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        return transactionRepository.findByUserAndIsCategorizedFalse(user).stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -249,7 +330,7 @@ public class TransactionService {
                 .orElseThrow(() -> new TransactionNotFoundException("Транзакция не найдена"));
 
         if (!transaction.getUser().getId().equals(userId)) {
-            throw new SecurityException("Нет доступа к этой транзакции");
+            throw new TransactionAccessDeniedException("Нет доступа к этой транзакции");
         }
 
         Category category = categoryRepository.findById(categoryId)
@@ -262,77 +343,20 @@ public class TransactionService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, BigDecimal> getDailyStats(Long userId, LocalDate fromDate, LocalDate toDate) {
+    public long countUserTransactions(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        BigDecimal income = transactionRepository.getTotalIncomeByPeriod(user, fromDate, toDate);
-        BigDecimal expense = transactionRepository.getTotalExpenseByPeriod(user, fromDate, toDate);
-
-        income = income != null ? income : BigDecimal.ZERO;
-        expense = expense != null ? expense : BigDecimal.ZERO;
-
-        Map<String, BigDecimal> stats = new HashMap<>();
-        stats.put("income", income);
-        stats.put("expense", expense);
-        stats.put("balance", income.subtract(expense));
-
-        return stats;
-    }
-
-    @Transactional(readOnly = true)
-    public Map<LocalDate, BigDecimal> getDailyExpenses(Long userId, LocalDate fromDate, LocalDate toDate) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        List<Object[]> results = transactionRepository.getDailyExpenses(user, fromDate, toDate);
-        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
-
-        LocalDate date = fromDate;
-        while (!date.isAfter(toDate)) {
-            dailyMap.put(date, BigDecimal.ZERO);
-            date = date.plusDays(1);
-        }
-
-        for (Object[] row : results) {
-            LocalDate rowDate = (LocalDate) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-            dailyMap.put(rowDate, amount);
-        }
-
-        return dailyMap;
-    }
-
-    @Transactional(readOnly = true)
-    public Map<LocalDate, BigDecimal> getDailyIncomes(Long userId, LocalDate fromDate, LocalDate toDate) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
-
-        List<Object[]> results = transactionRepository.getDailyIncomes(user, fromDate, toDate);
-        Map<LocalDate, BigDecimal> dailyMap = new LinkedHashMap<>();
-
-        LocalDate date = fromDate;
-        while (!date.isAfter(toDate)) {
-            dailyMap.put(date, BigDecimal.ZERO);
-            date = date.plusDays(1);
-        }
-
-        for (Object[] row : results) {
-            LocalDate rowDate = (LocalDate) row[0];
-            BigDecimal amount = (BigDecimal) row[1];
-            dailyMap.put(rowDate, amount);
-        }
-
-        return dailyMap;
+        return transactionRepository.countByUser(user);
     }
 
     private void applyCategorizationRules(Transaction transaction, User user) {
         List<CategorizationRule> rules = ruleRepository
                 .findByUserAndIsActiveTrueOrderByPriorityDesc(user);
 
-        Map<String, CategorizationStrategy> strategyMap = new HashMap<>();
-        strategyMap.put("description", descriptionStrategy);
-        strategyMap.put("amount", amountStrategy);
+        Map<String, CategorizationStrategy> strategyMap = Map.of(
+                "description", descriptionStrategy,
+                "amount", amountStrategy
+        );
 
         for (CategorizationRule rule : rules) {
             CategorizationStrategy strategy = strategyMap.get(rule.getField());
@@ -352,23 +376,21 @@ public class TransactionService {
         };
     }
 
-    private BigDecimal reverseBalanceUpdate(BigDecimal currentBalance, BigDecimal amount, TransactionType type) {
-        return switch (type) {
-            case INCOME -> currentBalance.subtract(amount);
-            case EXPENSE -> currentBalance.add(amount);
-            case TRANSFER -> currentBalance;
-        };
-    }
-
     private TransactionDto mapToDto(Transaction transaction) {
+        CurrencyCode baseCurrency = transaction.getUser().getDefaultCurrency();
+        BigDecimal amountInBase = currencyService.convertTransaction(transaction, baseCurrency);
+
         return TransactionDto.builder()
                 .id(transaction.getId())
                 .accountId(transaction.getAccount().getId())
                 .accountName(transaction.getAccount().getName())
+                .accountCurrency(transaction.getAccount().getCurrency())
                 .categoryId(transaction.getCategory() != null ? transaction.getCategory().getId() : null)
                 .categoryName(transaction.getCategory() != null ? transaction.getCategory().getName() : null)
+                .categoryColor(transaction.getCategory() != null ? transaction.getCategory().getColor() : null)
                 .type(transaction.getType())
                 .amount(transaction.getAmount())
+                .amountInBaseCurrency(amountInBase)
                 .transactionDate(transaction.getTransactionDate())
                 .description(transaction.getDescription())
                 .isCategorized(transaction.getIsCategorized())

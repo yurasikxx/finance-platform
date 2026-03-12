@@ -6,17 +6,19 @@ import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.service.ImportService;
 import by.bsuir.fp.service.SecurityService;
 import by.bsuir.fp.service.TransactionService;
+import by.bsuir.fp.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,26 +27,30 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TransactionRestController {
 
+    private final SecurityService securityService;
+    private final UserService userService;
     private final TransactionService transactionService;
     private final ImportService importService;
-    private final SecurityService securityService;
 
     @GetMapping
     public ResponseEntity<Page<TransactionDto>> getTransactions(TransactionFilterDto filter) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.getTransactions(userId, filter));
+        Page<TransactionDto> transactions = transactionService.getTransactions(userId, filter);
+        return ResponseEntity.ok(transactions);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<TransactionDto> getTransactionById(@PathVariable Long id) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.getTransactionById(userId, id));
+        TransactionDto transaction = transactionService.getTransactionById(userId, id);
+        return ResponseEntity.ok(transaction);
     }
 
     @PostMapping
     public ResponseEntity<TransactionDto> createTransaction(@Valid @RequestBody TransactionDto transactionDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.createTransaction(userId, transactionDto));
+        TransactionDto created = transactionService.createTransaction(userId, transactionDto);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -52,7 +58,8 @@ public class TransactionRestController {
             @PathVariable Long id,
             @Valid @RequestBody TransactionDto transactionDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.updateTransaction(userId, id, transactionDto));
+        TransactionDto updated = transactionService.updateTransaction(userId, id, transactionDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
@@ -65,7 +72,8 @@ public class TransactionRestController {
     @GetMapping("/uncategorized")
     public ResponseEntity<List<TransactionDto>> getUncategorizedTransactions() {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.getUncategorizedTransactions(userId));
+        List<TransactionDto> transactions = transactionService.getUncategorizedTransactions(userId);
+        return ResponseEntity.ok(transactions);
     }
 
     @PostMapping("/{id}/categorize")
@@ -73,18 +81,53 @@ public class TransactionRestController {
             @PathVariable Long id,
             @RequestParam Long categoryId) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.categorizeTransaction(userId, id, categoryId));
+        TransactionDto transaction = transactionService.categorizeTransaction(userId, id, categoryId);
+        return ResponseEntity.ok(transaction);
+    }
+
+    @GetMapping("/stats/monthly")
+    public ResponseEntity<Map<String, BigDecimal>> getMonthlyStats() {
+        Long userId = securityService.getCurrentUserId();
+        var user = userService.getUserById(userId);
+
+        Map<String, BigDecimal> stats = transactionService.getMonthlyStatsInBaseCurrency(
+                userId, user.getDefaultCurrency()
+        );
+
+        return ResponseEntity.ok(stats);
     }
 
     @GetMapping("/stats/daily")
-    public ResponseEntity<Map<String, BigDecimal>> getDailyStats(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fromDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate toDate) {
+    public ResponseEntity<Map<String, Object>> getDailyStats(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fromDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate) {
+
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(transactionService.getDailyStats(userId, fromDate, toDate));
+        var user = userService.getUserById(userId);
+
+        Map<LocalDate, BigDecimal> dailyExpenses = transactionService.getDailyExpensesInBaseCurrency(
+                userId, fromDate, toDate, user.getDefaultCurrency()
+        );
+
+        Map<LocalDate, BigDecimal> dailyIncomes = transactionService.getDailyIncomesInBaseCurrency(
+                userId, fromDate, toDate, user.getDefaultCurrency()
+        );
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("expenses", dailyExpenses);
+        response.put("incomes", dailyIncomes);
+
+        return ResponseEntity.ok(response);
     }
 
-    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @GetMapping("/count")
+    public ResponseEntity<Long> countUserTransactions() {
+        Long userId = securityService.getCurrentUserId();
+        long count = transactionService.countUserTransactions(userId);
+        return ResponseEntity.ok(count);
+    }
+
+    @PostMapping(value = "/import", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ImportResult> importTransactions(
             @RequestParam("file") MultipartFile file,
             @RequestParam("accountId") Long accountId) {

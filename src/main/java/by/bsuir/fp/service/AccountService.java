@@ -6,22 +6,28 @@ import by.bsuir.fp.exception.AccountNotFoundException;
 import by.bsuir.fp.exception.UserNotFoundException;
 import by.bsuir.fp.model.Account;
 import by.bsuir.fp.model.User;
+import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.repository.AccountRepository;
 import by.bsuir.fp.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final CurrencyService currencyService;
 
     @Transactional
     public AccountDto createAccount(Long userId, AccountDto accountDto) {
@@ -61,6 +67,7 @@ public class AccountService {
 
         return accountRepository.findByUser(user).stream()
                 .map(this::mapToDto)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
@@ -104,12 +111,34 @@ public class AccountService {
     }
 
     @Transactional(readOnly = true)
-    public BigDecimal getTotalBalance(Long userId) {
+    public BigDecimal getTotalBalanceInBaseCurrency(Long userId, CurrencyCode baseCurrency) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
 
-        BigDecimal total = accountRepository.getTotalBalanceByUser(user);
-        return total != null ? total : BigDecimal.ZERO;
+        List<Account> accounts = accountRepository.findByUser(user);
+
+        BigDecimal total = BigDecimal.ZERO;
+
+        for (Account account : accounts) {
+            BigDecimal converted = currencyService.convert(
+                    account.getCurrentBalance(),
+                    account.getCurrency(),
+                    baseCurrency,
+                    LocalDate.now()
+            );
+
+            log.debug("Account {}: {} {} -> {} {}",
+                    account.getName(),
+                    account.getCurrentBalance(),
+                    account.getCurrency(),
+                    converted,
+                    baseCurrency);
+
+            total = total.add(converted);
+        }
+
+        log.info("Total balance for user {} in {}: {}", userId, baseCurrency, total);
+        return total;
     }
 
     @Transactional(readOnly = true)

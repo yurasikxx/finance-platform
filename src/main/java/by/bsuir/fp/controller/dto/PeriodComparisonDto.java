@@ -9,11 +9,12 @@ import java.math.BigDecimal;
 @Builder
 public class PeriodComparisonDto {
     private String periodName;
-    private BigDecimal balance;
     private BigDecimal currentIncome;
     private BigDecimal currentExpense;
+    private BigDecimal currentBalance;
     private BigDecimal previousIncome;
     private BigDecimal previousExpense;
+    private BigDecimal previousBalance;
     private BigDecimal incomeChange;
     private BigDecimal expenseChange;
 }

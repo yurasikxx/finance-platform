@@ -40,4 +40,16 @@ public class CurrencyRestController {
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
         return ResponseEntity.ok(currencyService.convert(amount, from, to, date));
     }
+
+    @PostMapping("/rates/update")
+    public ResponseEntity<String> updateAllRates() {
+        currencyService.updateDailyRates();
+        return ResponseEntity.ok("Курсы валют успешно обновлены");
+    }
+
+    @PostMapping("/rates/update/{currency}")
+    public ResponseEntity<String> updateRate(@PathVariable CurrencyCode currency) {
+        currencyService.fetchAndSaveRate(currency, LocalDate.now());
+        return ResponseEntity.ok("Курс для " + currency + " обновлен");
+    }
 }

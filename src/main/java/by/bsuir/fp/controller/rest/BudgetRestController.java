@@ -6,6 +6,7 @@ import by.bsuir.fp.service.BudgetService;
 import by.bsuir.fp.service.SecurityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BudgetRestController {
 
-    private final BudgetService budgetService;
     private final SecurityService securityService;
+    private final BudgetService budgetService;
 
     @GetMapping("/active")
     public ResponseEntity<BudgetDto> getActiveBudget(
@@ -32,21 +33,22 @@ public class BudgetRestController {
     public ResponseEntity<List<BudgetDto>> getUserBudgets(
             @RequestParam(required = false) Integer year) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(budgetService.getUserBudgets(userId, year));
+        List<BudgetDto> budgets = budgetService.getUserBudgets(userId, year);
+        return ResponseEntity.ok(budgets);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<BudgetDto> getBudgetById(@PathVariable Long id) {
         Long userId = securityService.getCurrentUserId();
-        return budgetService.getBudgetById(userId, id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        BudgetDto budget = budgetService.getBudgetById(userId, id);
+        return budget != null ? ResponseEntity.ok(budget) : ResponseEntity.notFound().build();
     }
 
     @PostMapping
     public ResponseEntity<BudgetDto> createBudget(@Valid @RequestBody BudgetCreateDto createDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(budgetService.createBudget(userId, createDto));
+        BudgetDto created = budgetService.createBudget(userId, createDto);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -54,7 +56,8 @@ public class BudgetRestController {
             @PathVariable Long id,
             @Valid @RequestBody BudgetCreateDto updateDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(budgetService.updateBudget(userId, id, updateDto));
+        BudgetDto updated = budgetService.updateBudget(userId, id, updateDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
@@ -74,6 +77,7 @@ public class BudgetRestController {
     @PostMapping("/{id}/refresh")
     public ResponseEntity<BudgetDto> refreshBudget(@PathVariable Long id) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(budgetService.refreshBudgetStats(userId, id));
+        BudgetDto refreshed = budgetService.refreshBudgetStats(userId, id);
+        return ResponseEntity.ok(refreshed);
     }
 }

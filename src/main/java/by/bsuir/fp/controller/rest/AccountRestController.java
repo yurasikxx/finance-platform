@@ -3,8 +3,10 @@ package by.bsuir.fp.controller.rest;
 import by.bsuir.fp.controller.dto.AccountDto;
 import by.bsuir.fp.service.AccountService;
 import by.bsuir.fp.service.SecurityService;
+import by.bsuir.fp.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,25 +18,29 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AccountRestController {
 
-    private final AccountService accountService;
     private final SecurityService securityService;
+    private final UserService userService;
+    private final AccountService accountService;
 
     @GetMapping
     public ResponseEntity<List<AccountDto>> getUserAccounts() {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(accountService.getUserAccounts(userId));
+        List<AccountDto> accounts = accountService.getUserAccounts(userId);
+        return ResponseEntity.ok(accounts);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountDto> getAccountById(@PathVariable Long id) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(accountService.getAccountById(userId, id));
+        AccountDto account = accountService.getAccountById(userId, id);
+        return ResponseEntity.ok(account);
     }
 
     @PostMapping
     public ResponseEntity<AccountDto> createAccount(@Valid @RequestBody AccountDto accountDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(accountService.createAccount(userId, accountDto));
+        AccountDto created = accountService.createAccount(userId, accountDto);
+        return new ResponseEntity<>(created, HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
@@ -42,7 +48,8 @@ public class AccountRestController {
             @PathVariable Long id,
             @Valid @RequestBody AccountDto accountDto) {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(accountService.updateAccount(userId, id, accountDto));
+        AccountDto updated = accountService.updateAccount(userId, id, accountDto);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
@@ -55,6 +62,15 @@ public class AccountRestController {
     @GetMapping("/balance/total")
     public ResponseEntity<BigDecimal> getTotalBalance() {
         Long userId = securityService.getCurrentUserId();
-        return ResponseEntity.ok(accountService.getTotalBalance(userId));
+        var user = userService.getUserById(userId);
+        BigDecimal totalBalance = accountService.getTotalBalanceInBaseCurrency(userId, user.getDefaultCurrency());
+        return ResponseEntity.ok(totalBalance);
+    }
+
+    @GetMapping("/count")
+    public ResponseEntity<Long> countUserAccounts() {
+        Long userId = securityService.getCurrentUserId();
+        long count = accountService.countUserAccounts(userId);
+        return ResponseEntity.ok(count);
     }
 }

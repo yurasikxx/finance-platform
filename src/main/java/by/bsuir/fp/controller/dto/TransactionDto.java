@@ -1,5 +1,6 @@
 package by.bsuir.fp.controller.dto;
 
+import by.bsuir.fp.model.enums.CurrencyCode;
 import by.bsuir.fp.model.enums.TransactionType;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -22,8 +23,11 @@ public class TransactionDto {
     private Long accountId;
 
     private String accountName;
+    private CurrencyCode accountCurrency;
+
     private Long categoryId;
     private String categoryName;
+    private String categoryColor;
 
     @NotNull(message = "Тип транзакции обязателен")
     private TransactionType type;
@@ -31,6 +35,8 @@ public class TransactionDto {
     @NotNull(message = "Сумма обязательна")
     @Positive(message = "Сумма должна быть положительной")
     private BigDecimal amount;
+
+    private BigDecimal amountInBaseCurrency;
 
     @NotNull(message = "Дата обязательна")
     private LocalDate transactionDate;

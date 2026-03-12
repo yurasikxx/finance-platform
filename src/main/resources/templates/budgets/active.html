@@ -34,8 +34,8 @@
                         <div class="card bg-success text-white">
                             <div class="card-body">
                                 <h5 class="card-title">Плановый доход</h5>
-                                <h3 th:text="${#numbers.formatDecimal(budget.plannedIncome, 1, 2, 'COMMA')} + ' BYN'">
-                                    1000.00 BYN</h3>
+                                <h3 th:text="${#numbers.formatDecimal(budget.plannedIncome, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    1000,00 BYN</h3>
                             </div>
                         </div>
                     </div>
@@ -43,8 +43,8 @@
                         <div class="card bg-info text-white">
                             <div class="card-body">
                                 <h5 class="card-title">Всего потрачено</h5>
-                                <h3 th:text="${#numbers.formatDecimal(budget.totalSpent, 1, 2, 'COMMA')} + ' BYN'">
-                                    500.00 BYN</h3>
+                                <h3 th:text="${#numbers.formatDecimal(budget.totalSpent, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    500,00 BYN</h3>
                             </div>
                         </div>
                     </div>
@@ -53,8 +53,8 @@
                              th:classappend="${budget.remainingBudget < 0} ? 'bg-danger text-white' : 'bg-primary text-white'">
                             <div class="card-body">
                                 <h5 class="card-title">Остаток бюджета</h5>
-                                <h3 th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 2, 'COMMA')} + ' BYN'">
-                                    500.00 BYN</h3>
+                                <h3 th:text="${#numbers.formatDecimal(budget.remainingBudget, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    500,00 BYN</h3>
                             </div>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
 
                 <div class="card">
                     <div class="card-header">
-                        <i class="bi bi-pie-chart"></i> Лимиты по категориям
+                        <i class="bi bi-pie-chart"></i> Лимиты по категориям (<span th:text="${baseCurrency}">BYN</span>)
                     </div>
                     <div class="card-body">
                         <table class="table">
@@ -81,14 +81,14 @@
                                     <div th:style="'width: 20px; height: 20px; background-color: ' + ${limit.categoryColor} + '; display: inline-block; border-radius: 3px; margin-right: 8px;'"></div>
                                     <span th:text="${limit.categoryName}">Продукты</span>
                                 </td>
-                                <td th:text="${#numbers.formatDecimal(limit.limitAmount, 1, 2, 'COMMA')} + ' BYN'">
-                                    500.00 BYN
+                                <td th:text="${#numbers.formatDecimal(limit.limitAmount, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    500,00 BYN
                                 </td>
-                                <td th:text="${#numbers.formatDecimal(limit.spentAmount, 1, 2, 'COMMA')} + ' BYN'">
-                                    300.00 BYN
+                                <td th:text="${#numbers.formatDecimal(limit.spentAmount, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    300,00 BYN
                                 </td>
-                                <td th:text="${#numbers.formatDecimal(limit.remainingAmount, 1, 2, 'COMMA')} + ' BYN'">
-                                    200.00 BYN
+                                <td th:text="${#numbers.formatDecimal(limit.remainingAmount, 1, 2, 'COMMA')} + ' ' + ${baseCurrency}">
+                                    200,00 BYN
                                 </td>
                                 <td style="width: 200px;">
                                     <div class="progress">
@@ -106,7 +106,6 @@
                     </div>
                 </div>
 
-                <br>
                 <form th:action="@{/budgets/{id}/refresh(id=${budget.id})}" method="post" class="mt-3 d-inline">
                     <button type="submit" class="btn btn-outline-primary">
                         <i class="bi bi-arrow-repeat"></i> Обновить статистику
