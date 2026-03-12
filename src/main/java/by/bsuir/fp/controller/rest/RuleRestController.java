@@ -2,7 +2,7 @@ package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.RuleDto;
 import by.bsuir.fp.service.CategorizationRuleService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.SecurityService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,28 +16,29 @@ import java.util.List;
 public class RuleRestController {
 
     private final CategorizationRuleService ruleService;
+    private final SecurityService securityService;
 
     @GetMapping
     public ResponseEntity<List<RuleDto>> getUserRules() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(ruleService.getUserRules(userId));
     }
 
     @GetMapping("/active")
     public ResponseEntity<List<RuleDto>> getActiveRules() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(ruleService.getActiveRules(userId));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<RuleDto> getRuleById(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(ruleService.getRuleById(userId, id));
     }
 
     @PostMapping
     public ResponseEntity<RuleDto> createRule(@Valid @RequestBody RuleDto ruleDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(ruleService.createRule(userId, ruleDto));
     }
 
@@ -45,13 +46,13 @@ public class RuleRestController {
     public ResponseEntity<RuleDto> updateRule(
             @PathVariable Long id,
             @Valid @RequestBody RuleDto ruleDto) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(ruleService.updateRule(userId, id, ruleDto));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRule(@PathVariable Long id) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         ruleService.deleteRule(userId, id);
         return ResponseEntity.noContent().build();
     }
@@ -60,7 +61,7 @@ public class RuleRestController {
     public ResponseEntity<Void> toggleRule(
             @PathVariable Long id,
             @RequestParam Boolean active) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         ruleService.toggleRuleActive(userId, id, active);
         return ResponseEntity.ok().build();
     }
@@ -69,7 +70,7 @@ public class RuleRestController {
     public ResponseEntity<Void> updatePriority(
             @PathVariable Long id,
             @RequestParam Integer priority) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         ruleService.updatePriority(userId, id, priority);
         return ResponseEntity.ok().build();
     }

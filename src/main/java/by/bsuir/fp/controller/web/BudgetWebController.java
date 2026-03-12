@@ -5,7 +5,7 @@ import by.bsuir.fp.controller.dto.BudgetDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.BudgetService;
 import by.bsuir.fp.service.CategoryService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.SecurityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -26,10 +26,11 @@ public class BudgetWebController {
 
     private final BudgetService budgetService;
     private final CategoryService categoryService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String list(@RequestParam(required = false) Integer year, Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         if (year == null) {
             year = YearMonth.now().getYear();
@@ -47,7 +48,7 @@ public class BudgetWebController {
 
     @GetMapping("/active")
     public String active(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         YearMonth current = YearMonth.now();
 
         BudgetDto activeBudget = budgetService.getActiveBudget(
@@ -64,7 +65,7 @@ public class BudgetWebController {
 
     @GetMapping("/create")
     public String createForm(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         YearMonth current = YearMonth.now();
 
         BudgetCreateDto budgetCreate = new BudgetCreateDto();
@@ -88,7 +89,7 @@ public class BudgetWebController {
     @PostMapping
     public String create(@ModelAttribute BudgetCreateDto budgetCreate, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
 
             if (budgetCreate.getCategoryLimits() != null) {
                 budgetCreate.getCategoryLimits().entrySet().removeIf(
@@ -106,7 +107,7 @@ public class BudgetWebController {
 
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         BudgetDto budget = budgetService.getBudgetById(userId, id).orElse(null);
         if (budget == null) {
@@ -139,7 +140,7 @@ public class BudgetWebController {
                          @ModelAttribute BudgetCreateDto budgetCreate,
                          RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             budgetService.updateBudget(userId, id, budgetCreate);
             redirectAttributes.addFlashAttribute("success", "Бюджет изменён");
         } catch (Exception e) {
@@ -151,7 +152,7 @@ public class BudgetWebController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             budgetService.deleteBudget(userId, id);
             redirectAttributes.addFlashAttribute("success", "Бюджет удалён");
         } catch (Exception e) {
@@ -163,7 +164,7 @@ public class BudgetWebController {
     @PostMapping("/{id}/complete")
     public String complete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             budgetService.completeBudget(userId, id);
             redirectAttributes.addFlashAttribute("success", "Бюджет завершен");
         } catch (Exception e) {

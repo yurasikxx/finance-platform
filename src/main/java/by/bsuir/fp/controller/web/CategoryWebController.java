@@ -3,7 +3,7 @@ package by.bsuir.fp.controller.web;
 import by.bsuir.fp.controller.dto.CategoryDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.CategoryService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.SecurityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -19,10 +19,11 @@ import java.util.List;
 public class CategoryWebController {
 
     private final CategoryService categoryService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String list(@RequestParam(required = false) TransactionType type, Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         List<CategoryDto> categories = categoryService.getUserCategories(userId, type);
 
         model.addAttribute("categories", categories);
@@ -46,7 +47,7 @@ public class CategoryWebController {
     @PostMapping
     public String create(@ModelAttribute CategoryDto categoryDto, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             categoryService.createCategory(userId, categoryDto);
             redirectAttributes.addFlashAttribute("success", "Категория создана");
         } catch (Exception e) {
@@ -57,7 +58,7 @@ public class CategoryWebController {
 
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         CategoryDto category = categoryService.getCategoryById(userId, id);
 
         model.addAttribute("category", category);
@@ -73,7 +74,7 @@ public class CategoryWebController {
                          @ModelAttribute CategoryDto categoryDto,
                          RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             categoryService.updateCategory(userId, id, categoryDto);
             redirectAttributes.addFlashAttribute("success", "Категория обновлена");
         } catch (Exception e) {
@@ -85,7 +86,7 @@ public class CategoryWebController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             categoryService.deleteCategory(userId, id);
             redirectAttributes.addFlashAttribute("success", "Категория удалена");
         } catch (IllegalStateException e) {

@@ -2,30 +2,21 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head th:replace="~{layout/header :: header('Вход в систему')}"></head>
 <body>
-<div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show alert-flash" role="alert">
-    <i class="bi bi-exclamation-triangle-fill"></i>
-    Неверный email или пароль
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-
-<div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show alert-flash" role="alert">
-    <i class="bi bi-check-circle-fill"></i>
-    Вы успешно вышли из системы
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-
-<div th:if="${param.registered}" class="alert alert-success alert-dismissible fade show alert-flash" role="alert">
-    <i class="bi bi-check-circle-fill"></i>
-    Регистрация успешна! Войдите в систему
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
 <div class="container mt-5">
     <div class="row justify-content-center">
         <div class="col-md-4">
             <h3 class="text-center mb-4">Вход в систему</h3>
 
-            <div th:if="${param.error}" class="alert alert-danger">
+            <div th:if="${param.error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
                 Неверный email или пароль
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${param.logout}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill"></i>
+                Вы успешно вышли из системы
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
             <form method="post" action="/login">
@@ -40,10 +31,10 @@
                 <button type="submit" class="btn btn-primary w-100">Войти</button>
             </form>
 
-            <hr>
+            <hr class="my-4">
 
             <div class="text-center">
-                <a href="/oauth2/authorization/google" class="btn btn-outline-dark">
+                <a href="/oauth2/authorization/google" class="btn btn-outline-dark w-100">
                     <i class="bi bi-google"></i> Войти через Google
                 </a>
             </div>
@@ -54,5 +45,7 @@
         </div>
     </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

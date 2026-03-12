@@ -5,7 +5,7 @@ import by.bsuir.fp.controller.dto.AnalyticsRequestDto;
 import by.bsuir.fp.controller.dto.CategoryBreakdownDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.AnalyticsService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.SecurityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -23,10 +23,11 @@ import java.util.List;
 public class AnalyticsRestController {
 
     private final AnalyticsService analyticsService;
+    private final SecurityService securityService;
 
     @GetMapping("/dashboard")
     public ResponseEntity<AnalyticsDashboardDto> getDashboard(AnalyticsRequestDto request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(analyticsService.getDashboard(userId, request));
     }
 
@@ -35,7 +36,7 @@ public class AnalyticsRestController {
             @RequestParam TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fromDate,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate toDate) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         return ResponseEntity.ok(analyticsService.getCategoryBreakdown(userId, type, fromDate, toDate));
     }
 }

@@ -4,11 +4,7 @@ import by.bsuir.fp.controller.dto.CategoryBreakdownDto;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.model.enums.TransactionType;
-import by.bsuir.fp.service.AccountService;
-import by.bsuir.fp.service.AnalyticsService;
-import by.bsuir.fp.service.BudgetService;
-import by.bsuir.fp.service.TransactionService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,10 +28,11 @@ public class DashboardWebController {
     private final TransactionService transactionService;
     private final AnalyticsService analyticsService;
     private final BudgetService budgetService;
+    private final SecurityService securityService;
 
     @GetMapping("/dashboard")
     public String dashboard(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         LocalDate now = LocalDate.now();
         LocalDate startOfMonth = YearMonth.now().atDay(1);

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.9.xsd">
+
+    <changeSet id="13" author="ytkachik">
+        <comment>Drop existing foreign key constraints</comment>
+
+        <dropForeignKeyConstraint baseTableName="accounts" constraintName="fk_accounts_user"/>
+        <dropForeignKeyConstraint baseTableName="categories" constraintName="fk_categories_user"/>
+        <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transactions_user"/>
+        <dropForeignKeyConstraint baseTableName="categorization_rules" constraintName="fk_rules_user"/>
+        <dropForeignKeyConstraint baseTableName="budgets" constraintName="fk_budgets_user"/>
+    </changeSet>
+
+    <changeSet id="14" author="ytkachik">
+        <comment>Add foreign keys with CASCADE DELETE</comment>
+
+        <addForeignKeyConstraint baseTableName="accounts"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_accounts_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="categories"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_categories_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="transactions"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_transactions_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="categorization_rules"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_rules_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="budgets"
+                                 baseColumnNames="user_id"
+                                 constraintName="fk_budgets_user"
+                                 referencedTableName="users"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+    </changeSet>
+
+    <changeSet id="15" author="ytkachik">
+        <comment>Add cascade for budget_limits and transactions dependencies</comment>
+
+        <dropForeignKeyConstraint baseTableName="budget_limits" constraintName="fk_limits_budget"/>
+        <dropForeignKeyConstraint baseTableName="budget_limits" constraintName="fk_limits_category"/>
+        <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transactions_account"/>
+        <dropForeignKeyConstraint baseTableName="transactions" constraintName="fk_transactions_category"/>
+
+        <addForeignKeyConstraint baseTableName="budget_limits"
+                                 baseColumnNames="budget_id"
+                                 constraintName="fk_limits_budget"
+                                 referencedTableName="budgets"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="budget_limits"
+                                 baseColumnNames="category_id"
+                                 constraintName="fk_limits_category"
+                                 referencedTableName="categories"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="transactions"
+                                 baseColumnNames="account_id"
+                                 constraintName="fk_transactions_account"
+                                 referencedTableName="accounts"
+                                 referencedColumnNames="id"
+                                 deleteCascade="true"/>
+
+        <addForeignKeyConstraint baseTableName="transactions"
+                                 baseColumnNames="category_id"
+                                 constraintName="fk_transactions_category"
+                                 referencedTableName="categories"
+                                 referencedColumnNames="id"
+                                 deleteCascade="false"/>
+    </changeSet>
+</databaseChangeLog>

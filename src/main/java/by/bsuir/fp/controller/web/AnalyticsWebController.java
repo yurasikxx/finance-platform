@@ -5,8 +5,8 @@ import by.bsuir.fp.controller.dto.AnalyticsRequestDto;
 import by.bsuir.fp.controller.dto.CategoryBreakdownDto;
 import by.bsuir.fp.model.enums.TransactionType;
 import by.bsuir.fp.service.AnalyticsService;
+import by.bsuir.fp.service.SecurityService;
 import by.bsuir.fp.service.TransactionService;
-import by.bsuir.fp.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
@@ -30,6 +30,7 @@ public class AnalyticsWebController {
 
     private final AnalyticsService analyticsService;
     private final TransactionService transactionService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String dashboard(
@@ -37,7 +38,7 @@ public class AnalyticsWebController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate toDate,
             Model model) {
 
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         LocalDate start = fromDate != null ? fromDate : YearMonth.now().atDay(1);
         LocalDate end = toDate != null ? toDate : LocalDate.now();
@@ -95,7 +96,7 @@ public class AnalyticsWebController {
 
     @GetMapping("/reports")
     public String reports(Model model) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         LocalDate now = LocalDate.now();
         LocalDate startOfMonth = YearMonth.now().atDay(1);

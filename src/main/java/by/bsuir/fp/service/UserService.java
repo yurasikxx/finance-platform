@@ -72,6 +72,12 @@ public class UserService {
         return mapToResponseDto(userRepository.save(user));
     }
 
+    public boolean checkPassword(Long userId, String rawPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Пользователь не найден"));
+        return passwordEncoder.matches(rawPassword, user.getPasswordHash());
+    }
+
     @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {

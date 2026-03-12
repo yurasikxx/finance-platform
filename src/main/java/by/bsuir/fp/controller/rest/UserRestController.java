@@ -2,11 +2,7 @@ package by.bsuir.fp.controller.rest;
 
 import by.bsuir.fp.controller.dto.UserRegistrationDto;
 import by.bsuir.fp.controller.dto.UserResponseDto;
-import by.bsuir.fp.service.AccountService;
-import by.bsuir.fp.service.CategorizationRuleService;
-import by.bsuir.fp.service.TransactionService;
-import by.bsuir.fp.service.UserService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +22,7 @@ public class UserRestController {
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategorizationRuleService ruleService;
+    private final SecurityService securityService;
 
     @GetMapping("/me")
     public ResponseEntity<UserResponseDto> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
@@ -35,7 +32,7 @@ public class UserRestController {
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getUserStats() {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalTransactions", transactionService.countUserTransactions(userId));

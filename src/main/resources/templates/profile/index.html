@@ -77,7 +77,7 @@
                         <div class="card-body">
                             <p class="text-muted">Удаление аккаунта приведет к безвозвратной потере всех данных.</p>
                             <form th:action="@{/profile/delete}" method="post"
-                                  onsubmit="return confirm('Вы уверены? Это действие нельзя отменить.');">
+                                  onsubmit="return confirm('Вы уверены? Это действие нельзя отменить. Все ваши транзакции, счета и категории будут удалены.');">
                                 <button type="submit" class="btn btn-danger w-100">
                                     <i class="bi bi-exclamation-triangle"></i> Удалить аккаунт
                                 </button>
@@ -91,14 +91,13 @@
                         </div>
                         <div class="card-body">
                             <p>
-                                <i class="bi bi-shield-check text-success"></i>
-                                Двухфакторная аутентификация: <span class="badge bg-secondary">Не подключена</span>
-                            </p>
-                            <p>
                                 <i class="bi bi-google"></i>
                                 Аккаунт Google:
-                                <span th:if="${user.googleId}" class="badge bg-success">Подключен</span>
-                                <span th:if="!${user.googleId}" class="badge bg-secondary">Не подключен</span>
+                                <span th:if="${user.googleId != null}" class="badge bg-success">Подключен</span>
+                                <span th:if="${user.googleId == null}" class="badge bg-secondary">Не подключен</span>
+                            </p>
+                            <p class="text-muted small">
+                                * Вход через Google позволяет использовать ваш Google-аккаунт для авторизации
                             </p>
                         </div>
                     </div>

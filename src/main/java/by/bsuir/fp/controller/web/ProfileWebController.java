@@ -3,19 +3,13 @@ package by.bsuir.fp.controller.web;
 import by.bsuir.fp.controller.dto.UserRegistrationDto;
 import by.bsuir.fp.controller.dto.UserResponseDto;
 import by.bsuir.fp.model.enums.CurrencyCode;
-import by.bsuir.fp.service.AccountService;
-import by.bsuir.fp.service.CategorizationRuleService;
-import by.bsuir.fp.service.TransactionService;
-import by.bsuir.fp.service.UserService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -27,16 +21,16 @@ public class ProfileWebController {
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategorizationRuleService ruleService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String profile(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         UserResponseDto user = userService.getUserById(userId);
 
         model.addAttribute("totalTransactions", transactionService.countUserTransactions(userId));
         model.addAttribute("totalAccounts", accountService.countUserAccounts(userId));
         model.addAttribute("activeRules", ruleService.countActiveRules(userId));
-
         model.addAttribute("user", user);
         model.addAttribute("currentUri", request.getRequestURI());
 
@@ -45,7 +39,7 @@ public class ProfileWebController {
 
     @GetMapping("/edit")
     public String editForm(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         UserResponseDto user = userService.getUserById(userId);
 
         UserRegistrationDto editForm = new UserRegistrationDto();
@@ -61,14 +55,66 @@ public class ProfileWebController {
     }
 
     @PostMapping("/edit")
-    public String update(@ModelAttribute UserRegistrationDto editForm, RedirectAttributes redirectAttributes) {
+    public String update(
+            @ModelAttribute UserRegistrationDto editForm,
+            @RequestParam(required = false) String currentPassword,
+            @RequestParam(required = false) String newPassword,
+            @RequestParam(required = false) String confirmPassword,
+            RedirectAttributes redirectAttributes) {
+
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
+
+            if (newPassword != null && !newPassword.isEmpty()) {
+                if (currentPassword == null || currentPassword.isEmpty()) {
+                    redirectAttributes.addFlashAttribute("error", "Введите текущий пароль");
+                    return "redirect:/profile/edit";
+                }
+
+                if (!userService.checkPassword(userId, currentPassword)) {
+                    redirectAttributes.addFlashAttribute("error", "Неверный текущий пароль");
+                    return "redirect:/profile/edit";
+                }
+
+                if (!newPassword.equals(confirmPassword)) {
+                    redirectAttributes.addFlashAttribute("error", "Новый пароль и подтверждение не совпадают");
+                    return "redirect:/profile/edit";
+                }
+
+                if (newPassword.length() < 6) {
+                    redirectAttributes.addFlashAttribute("error", "Пароль должен содержать минимум 6 символов");
+                    return "redirect:/profile/edit";
+                }
+
+                editForm.setPassword(newPassword);
+            }
+
             userService.updateUser(userId, editForm);
-            redirectAttributes.addFlashAttribute("success", "Профиль обновлен");
+            redirectAttributes.addFlashAttribute("success", "Профиль успешно обновлен");
+
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
         }
+
         return "redirect:/profile";
+    }
+
+    @PostMapping("/delete")
+    public String deleteAccount(RedirectAttributes redirectAttributes, HttpSession session) {
+        try {
+            Long userId = securityService.getCurrentUserId();
+
+            userService.deleteUser(userId);
+
+            session.invalidate();
+
+            redirectAttributes.addFlashAttribute("success", "Аккаунт успешно удален");
+
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка удаления аккаунта: " + e.getMessage());
+            return "redirect:/profile";
+        }
+
+        return "redirect:/login";
     }
 }

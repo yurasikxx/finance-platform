@@ -9,5 +9,6 @@
     <include file="v1/v1-insert-reference-data.xml" relativeToChangelogFile="true"/>
     <include file="v2/v2-create-indexes.xml" relativeToChangelogFile="true"/>
     <include file="v3/v3-insert-default-categories.xml" relativeToChangelogFile="true"/>
+    <include file="v4/v4-add-cascade-delete.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>

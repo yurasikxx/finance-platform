@@ -4,11 +4,7 @@ import by.bsuir.fp.controller.dto.ImportResult;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.model.enums.TransactionType;
-import by.bsuir.fp.service.AccountService;
-import by.bsuir.fp.service.CategoryService;
-import by.bsuir.fp.service.ImportService;
-import by.bsuir.fp.service.TransactionService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -30,6 +26,7 @@ public class TransactionWebController {
     private final AccountService accountService;
     private final CategoryService categoryService;
     private final ImportService importService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String list(
@@ -40,7 +37,7 @@ public class TransactionWebController {
             Model model,
             HttpServletRequest request) {
 
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         if (page < 0) {
             page = 0;
@@ -75,7 +72,7 @@ public class TransactionWebController {
 
     @GetMapping("/add")
     public String addForm(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         model.addAttribute("transaction", new TransactionDto());
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
@@ -90,7 +87,7 @@ public class TransactionWebController {
     @PostMapping
     public String create(@ModelAttribute TransactionDto transactionDto, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             transactionService.createTransaction(userId, transactionDto);
             redirectAttributes.addFlashAttribute("success", "Транзакция успешно добавлена");
         } catch (Exception e) {
@@ -101,7 +98,7 @@ public class TransactionWebController {
 
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         TransactionDto transaction = transactionService.getTransactionById(userId, id);
 
@@ -125,7 +122,7 @@ public class TransactionWebController {
                          @ModelAttribute TransactionDto transactionDto,
                          RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             transactionService.updateTransaction(userId, id, transactionDto);
             redirectAttributes.addFlashAttribute("success", "Транзакция обновлена");
         } catch (Exception e) {
@@ -138,7 +135,7 @@ public class TransactionWebController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             transactionService.deleteTransaction(userId, id);
             redirectAttributes.addFlashAttribute("success", "Транзакция удалена");
         } catch (Exception e) {
@@ -149,7 +146,7 @@ public class TransactionWebController {
 
     @GetMapping("/import")
     public String importForm(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         model.addAttribute("accounts", accountService.getUserAccounts(userId));
         model.addAttribute("currentUri", request.getRequestURI());
@@ -164,7 +161,7 @@ public class TransactionWebController {
             RedirectAttributes redirectAttributes) {
 
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             ImportResult result = importService.importFromCsv(userId, accountId, file);
 
             if (result.getErrorCount() == 0) {
@@ -187,7 +184,7 @@ public class TransactionWebController {
 
     @GetMapping("/uncategorized")
     public String uncategorized(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
 
         List<TransactionDto> uncategorized = transactionService.getUncategorizedTransactions(userId);
         model.addAttribute("transactions", uncategorized);
@@ -200,7 +197,7 @@ public class TransactionWebController {
     @PostMapping("/{id}/categorize")
     public String categorize(@PathVariable Long id, @RequestParam Long categoryId, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             transactionService.categorizeTransaction(userId, id, categoryId);
             redirectAttributes.addFlashAttribute("success", "Категория назначена");
         } catch (Exception e) {

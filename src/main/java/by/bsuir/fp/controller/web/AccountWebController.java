@@ -2,7 +2,7 @@ package by.bsuir.fp.controller.web;
 
 import by.bsuir.fp.controller.dto.AccountDto;
 import by.bsuir.fp.service.AccountService;
-import by.bsuir.fp.util.SecurityUtils;
+import by.bsuir.fp.service.SecurityService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -19,10 +19,11 @@ import java.util.List;
 public class AccountWebController {
 
     private final AccountService accountService;
+    private final SecurityService securityService;
 
     @GetMapping
     public String list(Model model, HttpServletRequest request) {
-        Long userId = SecurityUtils.getCurrentUserId();
+        Long userId = securityService.getCurrentUserId();
         List<AccountDto> accounts = accountService.getUserAccounts(userId);
         BigDecimal totalBalance = accountService.getTotalBalance(userId);
 
@@ -43,7 +44,7 @@ public class AccountWebController {
     @PostMapping
     public String create(@ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             accountService.createAccount(userId, accountDto);
             redirectAttributes.addFlashAttribute("success", "Счет успешно создан");
         } catch (Exception e) {
@@ -55,7 +56,7 @@ public class AccountWebController {
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model, HttpServletRequest request) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             AccountDto account = accountService.getAccountById(userId, id);
 
             model.addAttribute("account", account);
@@ -70,7 +71,7 @@ public class AccountWebController {
     @PostMapping("/{id}/edit")
     public String update(@PathVariable Long id, @ModelAttribute AccountDto accountDto, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             accountService.updateAccount(userId, id, accountDto);
             redirectAttributes.addFlashAttribute("success", "Счет успешно обновлен");
         } catch (Exception e) {
@@ -82,7 +83,7 @@ public class AccountWebController {
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes redirectAttributes) {
         try {
-            Long userId = SecurityUtils.getCurrentUserId();
+            Long userId = securityService.getCurrentUserId();
             accountService.deleteAccount(userId, id);
             redirectAttributes.addFlashAttribute("success", "Счет успешно удален");
         } catch (Exception e) {
