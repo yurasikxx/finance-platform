@@ -1,5 +1,6 @@
 package by.bsuir.fp.controller.web;
 
+import by.bsuir.fp.controller.dto.ImportResult;
 import by.bsuir.fp.controller.dto.TransactionDto;
 import by.bsuir.fp.controller.dto.TransactionFilterDto;
 import by.bsuir.fp.controller.dto.UserResponseDto;
@@ -12,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
@@ -26,6 +28,7 @@ public class TransactionWebController {
     private final TransactionService transactionService;
     private final AccountService accountService;
     private final CategoryService categoryService;
+    private final ImportService importService;
 
     @GetMapping
     public String list(
@@ -167,5 +170,37 @@ public class TransactionWebController {
             redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
         }
         return "redirect:/transactions/uncategorized";
+    }
+
+    @GetMapping("/import")
+    public String importForm(Model model, HttpServletRequest request) {
+        Long userId = securityService.getCurrentUserId();
+        model.addAttribute("accounts", accountService.getUserAccounts(userId));
+        model.addAttribute("currentUri", request.getRequestURI());
+        return "transactions/import";
+    }
+
+    @PostMapping("/import")
+    public String importTransactions(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("accountId") Long accountId,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            Long userId = securityService.getCurrentUserId();
+            ImportResult result = importService.importFromCsv(userId, accountId, file);
+
+            if (result.getErrorCount() == 0) {
+                redirectAttributes.addFlashAttribute("success",
+                        "Импортировано " + result.getSuccessCount() + " транзакций");
+            } else {
+                redirectAttributes.addFlashAttribute("warning",
+                        "Импортировано " + result.getSuccessCount() + " из " + result.getTotalCount());
+            }
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Ошибка: " + e.getMessage());
+        }
+
+        return "redirect:/transactions";
     }
 }
